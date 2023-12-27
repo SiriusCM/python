@@ -17,11 +17,9 @@ def handler(sheet, url, index):
         print(text[0])
         for content in text:
             if "30天" in content:
-                sheet.write(index, 1, content)
-                sheet.write(index, 4, content[5])
+                sheet.write(index, 1, content[5])
             elif '正在出租' in content:
-                sheet.write(index, 2, content)
-                sheet.write(index, 5, content.split('套')[0][1:])
+                sheet.write(index, 2, content.split('套')[0][1:])
             elif '建成' in content:
                 sheet.write(index, 3, content[0:4])
         index = index + 1
@@ -43,7 +41,7 @@ area("朝阳", 'https://bj.lianjia.com/xiaoqu/chaoyang/', 2, 31)
 # area("丰台", 'https://bj.lianjia.com/xiaoqu/fengtai/', 2, 31)
 # area("石景山", 'https://bj.lianjia.com/xiaoqu/shijingshan/', 2, 11)
 area("通州", 'https://bj.lianjia.com/xiaoqu/tongzhou/', 2, 25)
-area("昌平", 'https://bj.lianjia.com/xiaoqu/changping/', 2, 27)
+#area("昌平", 'https://bj.lianjia.com/xiaoqu/changping/', 2, 27)
 # area("大兴", 'https://bj.lianjia.com/xiaoqu/daxing/', 2, 21)
 # area("亦庄", 'https://bj.lianjia.com/xiaoqu/yizhuangkaifaqu/', 2, 6)
 # area("顺义", 'https://bj.lianjia.com/xiaoqu/shunyi/', 2, 14)
