@@ -1,8 +1,8 @@
 import asyncio
 import socket
 
-ip = '127.0.0.1'
-port = 4096
+ip = '10.4.4.208'
+port = 10000
 loop = asyncio.get_event_loop()
 list = []
 

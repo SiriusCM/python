@@ -1,5 +1,3 @@
-import time
-
 import requests
 import xlwt
 from bs4 import BeautifulSoup
