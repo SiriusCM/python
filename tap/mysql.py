@@ -251,12 +251,12 @@ class Conf:
     pass
 
 
-ConfQuest = load_conf('ConfQuest.json')
-ConfThief = load_conf('ConfThief.json')
-ConfWeapon = load_conf('ConfWeapon.json')
-ConfCoop = load_conf('ConfCoop.json')
-ConfChallengeRank = load_conf('ConfChallengeRank.json')
-ConfRankReward = load_conf('ConfRankReward.json')
+ConfQuest = load_conf('data/ConfQuest.json')
+ConfThief = load_conf('data/ConfThief.json')
+ConfWeapon = load_conf('data/ConfWeapon.json')
+ConfCoop = load_conf('data/ConfCoop.json')
+ConfChallengeRank = load_conf('data/ConfChallengeRank.json')
+ConfRankReward = load_conf('data/ConfRankReward.json')
 
 weapon_condition = '('
 for sn in ConfWeapon:
