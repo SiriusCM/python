@@ -17,9 +17,6 @@ redis_db = redis.Redis(host='10.77.38.188', port=10480, password='Jpu2COnXTI43lW
 
 app = Flask(__name__)
 
-weaponCondition = mysql.weapon_condition
-print(weaponCondition)
-
 
 @app.route('/tap/getTapData')
 def hello():
