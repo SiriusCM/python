@@ -28,7 +28,7 @@ def postTapData(ip, database, minites):
                          database=database)
     t = str(time.time() * 1000 - minites * 60 * 1000)
     tapDataList = select(db,
-                         'SELECT ltrim(role_id) AS role_id,role_name,`level`,awakeLevel AS `level_rank`,portrait AS avatar_id,portraitFrame AS `头像框`,ltrim(thiefNum) AS `怪盗数量`, ltrim(personaNum) AS `人格面具`, ltrim(achievementNum) AS `成就`,`rank` AS `心之海段位`,ltrim(unionBossScore) AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE logoutTime > ' + t + ' AND role_id in ' + condition)
+                         'SELECT ltrim(role_id) AS role_id,role_name,`level`,`level` AS `level_rank`,ltrim(`level`) AS avatar_id,`level` AS `头像框`,ltrim(thiefNum) AS `怪盗数量`, ltrim(personaNum) AS `人格面具`, ltrim(achievementNum) AS `成就`,`rank` AS `心之海段位`,ltrim(unionBossScore) AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE logoutTime > ' + t + ' AND role_id in ' + condition)
     condition = '('
     for tapData in tapDataList:
         if tapData['role_id'] not in role_id_list:
@@ -40,7 +40,7 @@ def postTapData(ip, database, minites):
     condition += ')'
 
     thiefs = select(db,
-                    'select id,humanId,ltrim(role_id) as role_id,sn,`name` AS `名称`,ltrim(`level`) AS `等级`,ltrim(featureLevel) AS `特性等级`,ltrim(star) AS `星级` FROM game_tap_thief_0 WHERE role_id in ' + condition)
+                    'select id,humanId,ltrim(role_id) as role_id,sn,`name` AS `名称`,ltrim(`level`) AS `等级`,ltrim(`level`) AS `特性等级`,ltrim(star) AS `星级` FROM game_tap_thief_0 WHERE role_id in ' + condition)
     thiefListMap = groupby(thiefs, key=lambda x: x['role_id'])
     weapons = select(db,
                      'select id,humanId,ltrim(role_id) as role_id,sn,`name` AS `名称`,ltrim(`level`) AS `等级`,ltrim(remouldCount) AS `改造等级`,ltrim(star) AS `星级` FROM game_tap_weapon_0 WHERE role_id in ' + condition)
@@ -110,6 +110,5 @@ def select(db, sql):
 
 if __name__ == '__main__':
     ip = '10.148.154.24'
-    database = 'persona5_88_tap_'
     postTapData(ip, 'persona5_88_tap_0', 10 * 24 * 60)
     postTapData(ip, 'persona5_88_tap_1', 10 * 24 * 60)
