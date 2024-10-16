@@ -6,25 +6,32 @@ from pymysql import cursors
 
 import sender
 
-pathList = '/game-record/v1/role-list?client_id=5uk4xyrzhotypyeb7e&limit=1000'
-pathRole = '/game-record/v1/upload-role-profile?client_id=5uk4xyrzhotypyeb7e'
-pathBasic = '/game-record/v1/upload-basic-data?client_id=5uk4xyrzhotypyeb7e'
-pathCollection = '/game-record/v1/upload-collection-data?client_id=5uk4xyrzhotypyeb7e'
+pathList = '/game-record/v1/role-list?client_id=a74m3jogxou10jrcpf&limit=1000'
+pathRole = '/game-record/v1/upload-role-profile?client_id=a74m3jogxou10jrcpf'
+pathBasic = '/game-record/v1/upload-basic-data?client_id=a74m3jogxou10jrcpf'
+pathCollection = '/game-record/v1/upload-collection-data?client_id=a74m3jogxou10jrcpf'
 
 
 def postTapData(ip, database, minites):
     ret = sender.get(pathList)
-    list = eval(ret.text.replace('true', 'True'))['data']['list']
-    t = str(time.time() * 1000 - minites * 20 * 1000)
+    role_id_list = eval(ret.text.replace('true', 'True'))['data']['list']
+    condition = '('
+    for role_id in role_id_list:
+        condition = condition + role_id + ','
+    if len(condition) <= 1:
+        return
+    condition = condition[0:-1]
+    condition += ')'
 
     db = pymysql.connect(cursorclass=cursors.DictCursor, host=ip, user='root',
-                         password='N2kH5lJVJLAHWObs',
+                         password='Nsywl!@#$%^&123',
                          database=database)
+    t = str(time.time() * 1000 - minites * 60 * 1000)
     tapDataList = select(db,
-                         'SELECT ltrim(role_id) AS role_id,role_name,`level`,awakeLevel AS `超我等级`,portrait AS `头像`,portraitFrame AS `头像框`,ltrim(thiefNum) AS `怪盗数量`, ltrim(personaNum) AS `人格面具`, ltrim(achievementNum) AS `成就`,`rank` AS `心之海段位`,ltrim(unionBossScore) AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE logoutTime > ' + t)
+                         'SELECT ltrim(role_id) AS role_id,role_name,`level`,awakeLevel AS `超我等级`,portrait AS `头像`,portraitFrame AS `头像框`,ltrim(thiefNum) AS `怪盗数量`, ltrim(personaNum) AS `人格面具`, ltrim(achievementNum) AS `成就`,`rank` AS `心之海段位`,ltrim(unionBossScore) AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE logoutTime > ' + t + ' AND role_id in ' + condition)
     condition = '('
     for tapData in tapDataList:
-        if tapData['role_id'] not in list:
+        if tapData['role_id'] not in role_id_list:
             continue
         condition = condition + tapData['role_id'] + ','
     if len(condition) <= 1:
@@ -54,7 +61,7 @@ def postTapData(ip, database, minites):
         role_data = [{'field': '怪盗数量', 'value': tapData['怪盗数量']},
                      {'field': '人格面具', 'value': tapData['人格面具']},
                      {'field': '成就', 'value': tapData['成就']},
-                     {'field': '心之海段位', 'value': tapData['怪盗数量']},
+                     {'field': '心之海段位', 'value': tapData['心之海段位']},
                      {'field': '公会Boss总分', 'value': tapData['公会Boss总分']},
                      {'field': '玩家主线进度', 'value': tapData['玩家主线进度']}]
         data.append({'role_id': tapData['role_id'], 'role_data': role_data})
@@ -67,7 +74,7 @@ def postTapData(ip, database, minites):
         for thief in thiefList[1]:
             role_data.append({'id': thief['id'], 'sn': thief['sn'],
                               'optional_field': {'field_1': thief['名称'], 'field_2': thief['等级'],
-                                                 'field_3': thief['觉醒等级'], 'field_4': thief['星级']}})
+                                                 'field_3': thief['特性等级'], 'field_4': thief['星级']}})
         data.append({'role_id': thiefList[0], 'role_data': role_data})
     ret = sender.post(pathCollection, {'type': 1, 'data': data})
     print(ret.content)
@@ -102,7 +109,7 @@ def select(db, sql):
 
 
 if __name__ == '__main__':
-    ip = '10.77.38.188'
-    database = 'persona5_15_tap_'
-    postTapData(ip, database + '0', 90)
-    postTapData(ip, database + '1', 90)
+    ip = '10.148.154.24'
+    database = 'persona5_88_tap_'
+    postTapData(ip, 'persona5_88_tap_0', 10 * 24 * 60)
+    postTapData(ip, 'persona5_88_tap_1', 10 * 24 * 60)

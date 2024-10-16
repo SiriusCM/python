@@ -7,8 +7,8 @@ from hashlib import sha256
 
 import requests
 
-key = 'yXMxPa2bFrGXj3fZJZdTpxLwpIE89kp9'.encode('utf-8')
-url = 'https://partner.api.xdrnd.com'
+key = 'KX1vUBgb8jRCpMzhqw7Znk5HTGLJpWMG'.encode('utf-8')
+url = 'https://partner.taptapdada.com'
 
 
 def post(path, body):
@@ -26,7 +26,7 @@ def get(path):
 
 def get_headers(method, path, body):
     timestamp = round(time.time())
-    headers = {'X-Tap-App-Id': '201162', 'X-Tap-Client-Id': '5uk4xyrzhotypyeb7e', 'X-Tap-Nonce': str(uuid.uuid4())[0:8],
+    headers = {'X-Tap-App-Id': '305435', 'X-Tap-Client-Id': 'a74m3jogxou10jrcpf', 'X-Tap-Nonce': str(uuid.uuid4())[0:8],
                'X-Tap-Ts': str(timestamp)}
     headers['X-Tap-Sign'] = get_sign(method, path, headers, body)
     headers['Content-Type'] = 'application/json'
