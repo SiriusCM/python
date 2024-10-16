@@ -28,7 +28,7 @@ def postTapData(ip, database, minites):
                          database=database)
     t = str(time.time() * 1000 - minites * 60 * 1000)
     tapDataList = select(db,
-                         'SELECT ltrim(role_id) AS role_id,role_name,`level`,awakeLevel AS `超我等级`,portrait AS `头像`,portraitFrame AS `头像框`,ltrim(thiefNum) AS `怪盗数量`, ltrim(personaNum) AS `人格面具`, ltrim(achievementNum) AS `成就`,`rank` AS `心之海段位`,ltrim(unionBossScore) AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE logoutTime > ' + t + ' AND role_id in ' + condition)
+                         'SELECT ltrim(role_id) AS role_id,role_name,`level`,awakeLevel AS `level_rank`,portrait AS avatar_id,portraitFrame AS `头像框`,ltrim(thiefNum) AS `怪盗数量`, ltrim(personaNum) AS `人格面具`, ltrim(achievementNum) AS `成就`,`rank` AS `心之海段位`,ltrim(unionBossScore) AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE logoutTime > ' + t + ' AND role_id in ' + condition)
     condition = '('
     for tapData in tapDataList:
         if tapData['role_id'] not in role_id_list:
@@ -52,7 +52,7 @@ def postTapData(ip, database, minites):
 
     data = []
     for tapData in tapDataList:
-        data.append({'role_id': tapData['role_id'], 'role_name': tapData['role_name'], 'level': tapData['level']})
+        data.append({'role_id': tapData['role_id'], 'role_name': tapData['role_name'], 'level': tapData['level'], 'level_rank': tapData['level_rank'], 'avatar_id': tapData['avatar_id'], '头像框': tapData['头像框']})
     ret = sender.post(pathRole, {'data': data})
     print(ret.content)
 
