@@ -6,7 +6,7 @@ from pymysql import cursors
 
 import sender
 
-pathList = '/game-record/v1/role-list?client_id=5uk4xyrzhotypyeb7e&limit=1'
+pathList = '/game-record/v1/role-list?client_id=5uk4xyrzhotypyeb7e&limit=1000'
 pathRole = '/game-record/v1/upload-role-profile?client_id=5uk4xyrzhotypyeb7e'
 pathBasic = '/game-record/v1/upload-basic-data?client_id=5uk4xyrzhotypyeb7e'
 pathCollection = '/game-record/v1/upload-collection-data?client_id=5uk4xyrzhotypyeb7e'
@@ -14,22 +14,26 @@ pathCollection = '/game-record/v1/upload-collection-data?client_id=5uk4xyrzhotyp
 
 def postTapData(ip, database, minites):
     ret = sender.get(pathList)
-    print(ret.content.decode())
-    t = str(time.time() * 1000 - minites * 60 * 1000)
+    list = eval(ret.text.replace('true', 'True'))['data']['list']
+    t = str(time.time() * 1000 - minites * 20 * 1000)
 
     db = pymysql.connect(cursorclass=cursors.DictCursor, host=ip, user='root',
                          password='N2kH5lJVJLAHWObs',
                          database=database)
     tapDataList = select(db,
-                         'SELECT ltrim(role_id) AS role_id,role_name,`level`,ltrim(thiefNum) AS `怪盗数量`, ltrim(personaNum) AS `人格面具`, ltrim(achievementNum) AS `成就`,`rank` AS `心之海段位`,ltrim(unionBossScore) AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE logoutTime > ' + t)
+                         'SELECT ltrim(role_id) AS role_id,role_name,`level`,awakeLevel AS `超我等级`,portrait AS `头像`,portraitFrame AS `头像框`,ltrim(thiefNum) AS `怪盗数量`, ltrim(personaNum) AS `人格面具`, ltrim(achievementNum) AS `成就`,`rank` AS `心之海段位`,ltrim(unionBossScore) AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE logoutTime > ' + t)
     condition = '('
     for tapData in tapDataList:
+        if tapData['role_id'] not in list:
+            continue
         condition = condition + tapData['role_id'] + ','
+    if len(condition) <= 1:
+        return
     condition = condition[0:-1]
     condition += ')'
 
     thiefs = select(db,
-                    'select id,humanId,ltrim(role_id) as role_id,sn,`name` AS `名称`,ltrim(`level`) AS `等级`,ltrim(awakeLevel) AS `觉醒等级`,ltrim(star) AS `星级` FROM game_tap_thief_0 WHERE role_id in ' + condition)
+                    'select id,humanId,ltrim(role_id) as role_id,sn,`name` AS `名称`,ltrim(`level`) AS `等级`,ltrim(featureLevel) AS `特性等级`,ltrim(star) AS `星级` FROM game_tap_thief_0 WHERE role_id in ' + condition)
     thiefListMap = groupby(thiefs, key=lambda x: x['role_id'])
     weapons = select(db,
                      'select id,humanId,ltrim(role_id) as role_id,sn,`name` AS `名称`,ltrim(`level`) AS `等级`,ltrim(remouldCount) AS `改造等级`,ltrim(star) AS `星级` FROM game_tap_weapon_0 WHERE role_id in ' + condition)

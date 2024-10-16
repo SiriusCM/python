@@ -26,14 +26,14 @@ def getTapData():
     userId = request.args.get('userId')
     engine = engine0
     tapData = select(engine,
-                     'SELECT ltrim(role_id) AS role_id,role_name,`level`,thiefNum AS `怪盗数量`, personaNum AS `人格面具`, achievementNum AS `成就`,`rank` AS `心之海段位`,unionBossScore AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE role_id = ' + userId)
+                     'SELECT ltrim(role_id) AS role_id,role_name,`level`,awakeLevel AS `超我等级`,portrait AS `头像`,portraitFrame AS `头像框`,thiefNum AS `怪盗数量`, personaNum AS `人格面具`, achievementNum AS `成就`,`rank` AS `心之海段位`,unionBossScore AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE role_id = ' + userId)
     if len(tapData) == 0:
         engine = engine1
         tapData = select(engine,
                          'SELECT ltrim(role_id) AS role_id,role_name,`level`,thiefNum AS `怪盗数量`, personaNum AS `人格面具`, achievementNum AS `成就`,`rank` AS `心之海段位`,unionBossScore AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE role_id = ' + userId)
     tapData = tapData[0]
     tapData['拥有怪盗信息'] = select(engine,
-                                     'select id,humanId,role_id,sn,`name` AS `名称`,`level` AS `等级`,awakeLevel AS `觉醒等级`,star AS `星级` FROM game_tap_thief_0 WHERE role_id = ' + userId)
+                                     'select id,humanId,role_id,sn,`name` AS `名称`,`level` AS `等级`,featureLevel AS `特性等级`,star AS `星级` FROM game_tap_thief_0 WHERE role_id = ' + userId)
     tapData['拥有武器信息'] = select(engine,
                                      'select id,humanId,role_id,sn,`name` AS `名称`,`level` AS `等级`,remouldCount AS `改造等级`,star AS `星级` FROM game_tap_weapon_0 WHERE role_id = ' + userId)
     tapData['拥有协同者信息'] = select(engine,
