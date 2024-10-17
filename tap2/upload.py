@@ -28,7 +28,7 @@ def postTapData(ip, database, minites):
                          database=database)
     t = str(time.time() * 1000 - minites * 60 * 1000)
     tapDataList = select(db,
-                         'SELECT ltrim(role_id) AS role_id,role_name,`level`,awakeLevel AS level_rank,ltrim(portrait) AS avatar_id,portraitFrame AS `头像框`,ltrim(thiefNum) AS `怪盗数量`, ltrim(personaNum) AS `人格面具`, ltrim(achievementNum) AS `成就`,`rank` AS `心之海段位`,ltrim(unionBossScore) AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE logoutTime > ' + t + ' AND role_id in ' + condition)
+                         'SELECT ltrim(role_id) AS role_id,role_name,`level`,awakeLevel,ltrim(portrait) AS avatar_id,portraitFrame AS `头像框`,ltrim(thiefNum) AS `怪盗数量`, ltrim(personaNum) AS `人格面具`, ltrim(achievementNum) AS `成就`,`rank` AS `心之海段位`,ltrim(unionBossScore) AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE logoutTime > ' + t + ' AND role_id in ' + condition)
     condition = '('
     for tapData in tapDataList:
         if tapData['role_id'] not in role_id_list:
@@ -40,10 +40,10 @@ def postTapData(ip, database, minites):
     condition += ')'
 
     thiefs = select(db,
-                    'select id,humanId,ltrim(role_id) as role_id,sn,`name` AS `名称`,ltrim(`level`) AS `等级`,ltrim(featureLevel) AS `特性等级`,ltrim(star) AS `星级` FROM game_tap_thief_0 WHERE role_id in ' + condition)
+                    'select id,humanId,ltrim(role_id) as role_id,sn,`name` AS `名称`,ltrim(`level`) AS `等级`,ltrim(featureLevel) AS `特性等级`,ltrim(star - 1) AS `星级` FROM game_tap_thief_0 WHERE role_id in ' + condition)
     thiefListMap = groupby(thiefs, key=lambda x: x['role_id'])
     weapons = select(db,
-                     'select id,humanId,ltrim(role_id) as role_id,sn,`name` AS `名称`,ltrim(`level`) AS `等级`,ltrim(remouldCount) AS `改造等级`,ltrim(star) AS `星级` FROM game_tap_weapon_0 WHERE role_id in ' + condition)
+                     'select id,humanId,ltrim(role_id) as role_id,sn,`name` AS `名称`,ltrim(`level`) AS `等级`,ltrim(remouldCount) AS `改造等级`,ltrim(star - 1) AS `星级` FROM game_tap_weapon_0 WHERE role_id in ' + condition)
     weaponListMap = groupby(weapons, key=lambda x: x['role_id'])
     coops = select(db,
                    'select id,humanId,ltrim(role_id) as role_id,sn,`name` AS `名称`,ltrim(`level`) AS `等级` FROM game_tap_coop_0 WHERE role_id in ' + condition)
@@ -52,6 +52,11 @@ def postTapData(ip, database, minites):
 
     data = []
     for tapData in tapDataList:
+        if tapData['awakeLevel'] > 0:
+            tapData['level'] = tapData['awakeLevel']
+            tapData['level_rank'] = 1
+        else:
+            tapData['level_rank'] = 0
         data.append({'role_id': tapData['role_id'], 'role_name': tapData['role_name'], 'level': tapData['level'], 'level_rank': tapData['level_rank'], 'avatar_id': tapData['avatar_id'], '头像框': tapData['头像框']})
     ret = sender.post(pathRole, {'data': data})
     print(ret.content)
