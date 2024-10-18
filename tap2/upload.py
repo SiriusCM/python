@@ -57,7 +57,7 @@ def postTapData(ip, database, minites):
             tapData['level_rank'] = 1
         else:
             tapData['level_rank'] = 0
-        data.append({'role_id': tapData['role_id'], 'role_name': tapData['role_name'], 'level': tapData['level'], 'level_rank': tapData['level_rank'], 'avatar_id': tapData['avatar_id'], '头像框': tapData['头像框']})
+        data.append({'role_id': tapData['role_id'], 'role_name': tapData['role_name'], 'level': tapData['level'], 'level_rank': tapData['level_rank']})#, 'avatar_id': tapData['avatar_id'], '头像框': tapData['头像框']})
     ret = sender.post(pathRole, {'data': data})
     print(ret.content)
 
@@ -79,7 +79,7 @@ def postTapData(ip, database, minites):
         for thief in thiefList[1]:
             role_data.append({'id': thief['id'], 'sn': thief['sn'],
                               'optional_field': {'field_1': thief['名称'], 'field_2': thief['等级'],
-                                                 'field_3': thief['特性等级'], 'field_4': thief['星级']}})
+                                                 'field_3': thief['星级'], 'field_4': thief['特性等级']}})
         data.append({'role_id': thiefList[0], 'role_data': role_data})
     ret = sender.post(pathCollection, {'type': 1, 'data': data})
     print(ret.content)
