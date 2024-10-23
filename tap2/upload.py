@@ -57,7 +57,7 @@ def postTapData(ip, database, minites):
             tapData['level_rank'] = 1
         else:
             tapData['level_rank'] = 0
-        data.append({'role_id': tapData['role_id'], 'role_name': tapData['role_name'], 'level': tapData['level'], 'level_rank': tapData['level_rank']})#, 'avatar_id': tapData['avatar_id'], '头像框': tapData['头像框']})
+        data.append({'role_id': tapData['role_id'], 'role_name': tapData['role_name'], 'level': tapData['level'], 'level_rank': tapData['level_rank'], 'avatar_id': tapData['avatar_id'], '头像框': tapData['头像框']})
     ret = sender.post(pathRole, {'data': data})
     print(ret.content)
 

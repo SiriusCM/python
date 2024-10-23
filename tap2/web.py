@@ -5,14 +5,14 @@ from sqlalchemy import create_engine
 import upload
 
 engine0 = create_engine(
-    "mysql+pymysql://root:Nsywl!@#$%^&123@10.148.154.24:3306/persona5_88_tap_0",
+    "mysql+pymysql://root:Nsywl!@#$%^&123@10.77.38.129:3306/persona5_15_tap_0",
     max_overflow=0,  # 超过连接池大小外最多创建的连接
     pool_size=5,  # 连接池大小
     pool_timeout=30,  # 池中没有线程最多等待的时间，否则报错
     pool_recycle=-1  # 多久之后对线程池中的线程进行一次连接的回收（重置）
 )
 engine1 = create_engine(
-    "mysql+pymysql://root:Nsywl!@#$%^&123@10.148.154.24:3306/persona5_88_tap_1",
+    "mysql+pymysql://root:Nsywl!@#$%^&123@10.77.38.129:3306/persona5_15_tap_1",
     max_overflow=0,  # 超过连接池大小外最多创建的连接
     pool_size=5,  # 连接池大小
     pool_timeout=30,  # 池中没有线程最多等待的时间，否则报错
@@ -62,4 +62,4 @@ def select(engine, sql):
     return rets
 
 
-app.run(host='0.0.0.0', port=8888)
+app.run(host='0.0.0.0', port=8888, ssl_context=('D://releaseAll/server/config/simulator_certificate.cert', 'D://releaseAll/server/config/simulator_authkey.key'))
