@@ -108,9 +108,6 @@ def postTapData(ip, database, minites):
     ret = sender.post(pathCollection, {'type': 3, 'data': data})
     print(ret.content)
 
-    ret = sender.post(pathCollectionFilter, {'data': {'thiefNum': {'4': 14, '5': 19}, 'weaponNum': {'4': 36, '5': 40}}})
-    print(ret.content)
-
 
 def select(db, sql):
     cursor = db.cursor()
@@ -123,3 +120,7 @@ if __name__ == '__main__':
     ip = '10.148.154.24'
     postTapData(ip, 'persona5_88_tap_0', 10 * 24 * 60)
     postTapData(ip, 'persona5_88_tap_1', 10 * 24 * 60)
+
+    ret = sender.post(pathCollectionFilter,
+                      {'data': {'1': {'key_total': {'4': 14, '5': 19}}, '2': {'key_total': {'4': 36, '5': 40}}}})
+    print(ret.content)
