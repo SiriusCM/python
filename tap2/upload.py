@@ -10,6 +10,7 @@ pathList = '/game-record/v1/role-list?client_id=a74m3jogxou10jrcpf&limit=1000'
 pathRole = '/game-record/v1/upload-role-profile?client_id=a74m3jogxou10jrcpf'
 pathBasic = '/game-record/v1/upload-basic-data?client_id=a74m3jogxou10jrcpf'
 pathCollection = '/game-record/v1/upload-collection-data?client_id=a74m3jogxou10jrcpf'
+pathCollectionFilter = '/game-record/v1/upload-collection-filter-total?client_id=a74m3jogxou10jrcpf'
 
 
 def postTapData(ip, database, minites):
@@ -57,7 +58,9 @@ def postTapData(ip, database, minites):
             tapData['level_rank'] = 1
         else:
             tapData['level_rank'] = 0
-        data.append({'role_id': tapData['role_id'], 'role_name': tapData['role_name'], 'level': tapData['level'], 'level_rank': tapData['level_rank'], 'avatar_id': tapData['avatar_id'], '头像框': tapData['头像框']})
+        data.append({'role_id': tapData['role_id'], 'role_name': tapData['role_name'], 'level': tapData['level'],
+                     'level_rank': tapData['level_rank'], 'avatar_id': tapData['avatar_id'],
+                     '头像框': tapData['头像框']})
     ret = sender.post(pathRole, {'data': data})
     print(ret.content)
 
@@ -103,6 +106,9 @@ def postTapData(ip, database, minites):
                               'optional_field': {'field_1': coop['名称'], 'field_2': coop['等级']}})
         data.append({'role_id': coopList[0], 'role_data': role_data})
     ret = sender.post(pathCollection, {'type': 3, 'data': data})
+    print(ret.content)
+
+    ret = sender.post(pathCollectionFilter, {'data': {'thiefNum': {'4': 14, '5': 19}, 'weaponNum': {'4': 36, '5': 40}}})
     print(ret.content)
 
 
