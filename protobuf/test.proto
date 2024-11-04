@@ -1,4 +1,0 @@
-message CSGmCmd {
-//	option (msgid)              = 9937;
-	required string command	    = 1; // GM命令
-}

@@ -1,36 +1,65 @@
 import pymysql
-import redis
 from flask import Flask, request
-from pymysql import cursors
+from sqlalchemy import create_engine
 
-import mysql
+import upload
 
-ips = ['10.148.154.122', '10.148.154.92', '10.148.154.47', '10.148.154.105', '10.148.154.54', '10.148.154.65',
-       '10.148.154.127', '10.148.154.34', '10.148.154.52',
-       '10.148.154.21', '10.148.154.111', '10.148.154.41', '10.148.154.117', '10.148.154.43', '10.148.154.19',
-       '10.148.154.36', '10.148.154.33',
-       '10.148.154.35', '10.148.154.38', '10.148.154.18', '10.148.154.31', '10.148.154.23', '10.148.154.45',
-       '10.148.154.42', '10.148.154.48']
-ips = ['10.77.38.188']
-
-redis_db = redis.Redis(host='10.77.38.188', port=10480, password='Jpu2COnXTI43lWi1')
-
+engine0 = create_engine(
+    "mysql+pymysql://root:Nsywl!@#$%^&123@10.77.38.129:3306/persona5_15_tap_0",
+    max_overflow=0,  # 超过连接池大小外最多创建的连接
+    pool_size=5,  # 连接池大小
+    pool_timeout=30,  # 池中没有线程最多等待的时间，否则报错
+    pool_recycle=-1  # 多久之后对线程池中的线程进行一次连接的回收（重置）
+)
+engine1 = create_engine(
+    "mysql+pymysql://root:Nsywl!@#$%^&123@10.77.38.129:3306/persona5_15_tap_1",
+    max_overflow=0,  # 超过连接池大小外最多创建的连接
+    pool_size=5,  # 连接池大小
+    pool_timeout=30,  # 池中没有线程最多等待的时间，否则报错
+    pool_recycle=-1  # 多久之后对线程池中的线程进行一次连接的回收（重置）
+)
 app = Flask(__name__)
 
 
 @app.route('/tap/getTapData')
-def hello():
+def getTapData():
     userId = request.args.get('userId')
-    humanId = redis_db.hget('userid2id', userId)
-    humanId = humanId.decode()
-    index = int(humanId) % 2
-    db = pymysql.connect(cursorclass=cursors.DictCursor, host=ips[int(index / 2)], user='root',
-                         password='N2kH5lJVJLAHWObs',
-                         database='persona5_15_game_' + str(index))
-    ret = mysql.select_info(db, userId, humanId)
-    db.close()
+    engine = engine0
+    tapData = select(engine,
+                     'SELECT ltrim(role_id) AS role_id,role_name,`level`,awakeLevel,ltrim(portrait) AS avatar_id,portraitFrame AS `头像框`,thiefNum AS `怪盗数量`, personaNum AS `人格面具`, achievementNum AS `成就`,`rank` AS `心之海段位`,unionBossScore AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE role_id = ' + userId)
+    if len(tapData) == 0:
+        engine = engine1
+        tapData = select(engine,
+                         'SELECT ltrim(role_id) AS role_id,role_name,`level`,awakeLevel,ltrim(portrait) AS avatar_id,portraitFrame AS `头像框`,thiefNum AS `怪盗数量`, personaNum AS `人格面具`, achievementNum AS `成就`,`rank` AS `心之海段位`,unionBossScore AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE role_id = ' + userId)
+    tapData = tapData[0]
+    if tapData['awakeLevel'] > 0:
+        tapData['level'] = tapData['awakeLevel']
+        tapData['level_rank'] = 1
+    else:
+        tapData['level_rank'] = 0
+    tapData['拥有怪盗信息'] = select(engine,
+                                     'select id,humanId,role_id,sn,`name` AS `名称`,`level` AS `等级`,featureLevel AS `特性等级`,star - 1 AS `星级` FROM game_tap_thief_0 WHERE role_id = ' + userId)
+    tapData['拥有武器信息'] = select(engine,
+                                     'select id,humanId,role_id,sn,`name` AS `名称`,`level` AS `等级`,remouldCount AS `改造等级`,star - 1 AS `星级` FROM game_tap_weapon_0 WHERE role_id = ' + userId)
+    tapData['拥有协同者信息'] = select(engine,
+                                       'select id,humanId,role_id,sn,`name` AS `名称`,`level` AS `等级` FROM game_tap_coop_0 WHERE role_id = ' + userId)
+    return tapData
 
-    return ret
+
+@app.route('/tap/postTapData')
+def postTapData():
+    ip = request.args.get('ip')
+    database = request.args.get('database')
+    minites = request.args.get('minites')
+    upload.postTapData(ip, database, minites)
 
 
-app.run(host='0.0.0.0', port=8888)
+def select(engine, sql):
+    conn = engine.raw_connection()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    cursor.execute(sql)
+    rets = cursor.fetchall()
+    return rets
+
+
+app.run(host='0.0.0.0', port=8888, ssl_context=('D://releaseAll/server/config/simulator_certificate.cert', 'D://releaseAll/server/config/simulator_authkey.key'))
