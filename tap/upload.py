@@ -40,6 +40,10 @@ def postTapData(ip, database, minites):
     condition = condition[0:-1]
     condition += ')'
 
+    condition = '(10000000701)'
+    tapDataList = select(db,
+                         'SELECT ltrim(role_id) AS role_id,role_name,`level`,awakeLevel,ltrim(portrait) AS avatar_id,portraitFrame AS `头像框`,ltrim(thiefNum) AS `怪盗数量`, ltrim(personaNum) AS `人格面具`, ltrim(achievementNum) AS `成就`,`rank` AS `心之海段位`,ltrim(unionBossScore) AS `公会Boss总分`,questName AS `玩家主线进度` FROM game_tap_human_0 WHERE role_id in ' + condition)
+
     thiefs = select(db,
                     'select id,humanId,ltrim(role_id) as role_id,sn,`name` AS `名称`,ltrim(`level`) AS `等级`,ltrim(featureLevel) AS `特性等级`,ltrim(star - 1) AS `星级` FROM game_tap_thief_0 WHERE role_id in ' + condition)
     thiefListMap = groupby(thiefs, key=lambda x: x['role_id'])
@@ -83,6 +87,9 @@ def postTapData(ip, database, minites):
             role_data.append({'id': thief['id'], 'sn': thief['sn'],
                               'optional_field': {'field_1': thief['名称'], 'field_2': thief['等级'],
                                                  'field_3': thief['星级'], 'field_4': thief['特性等级']}})
+        role_data.append({'id': 10000, 'sn': 1212,
+                          'optional_field': {'field_1': '新角色', 'field_2': '2',
+                                             'field_3': '5', 'field_4': '2'}})
         data.append({'role_id': thiefList[0], 'role_data': role_data})
     ret = sender.post(pathCollection, {'type': 1, 'data': data})
     print(ret.content)
@@ -94,6 +101,15 @@ def postTapData(ip, database, minites):
             role_data.append({'id': weapon['id'], 'sn': weapon['sn'],
                               'optional_field': {'field_1': weapon['名称'], 'field_2': weapon['等级'],
                                                  'field_3': weapon['星级'], 'field_4': weapon['改造等级']}})
+        role_data.append({'id': 10001, 'sn': 200111,
+                          'optional_field': {'field_1': '凶兽之牙', 'field_2': '3',
+                                             'field_3': '6', 'field_4': '1'}})
+        role_data.append({'id': 10002, 'sn': 212113,
+                          'optional_field': {'field_1': '北风之女', 'field_2': '3',
+                                             'field_3': '5', 'field_4': '1'}})
+        role_data.append({'id': 10003, 'sn': 212114,
+                          'optional_field': {'field_1': '天鹅梦乡', 'field_2': '3',
+                                             'field_3': '6', 'field_4': '1'}})
         data.append({'role_id': weaponList[0], 'role_data': role_data})
     ret = sender.post(pathCollection, {'type': 2, 'data': data})
     print(ret.content)
@@ -104,6 +120,8 @@ def postTapData(ip, database, minites):
         for coop in coopList[1]:
             role_data.append({'id': coop['id'], 'sn': coop['sn'],
                               'optional_field': {'field_1': coop['名称'], 'field_2': coop['等级']}})
+        role_data.append({'id': 10000, 'sn': 17,
+                          'optional_field': {'field_1': '新coop', 'field_2': '4'}})
         data.append({'role_id': coopList[0], 'role_data': role_data})
     ret = sender.post(pathCollection, {'type': 3, 'data': data})
     print(ret.content)
