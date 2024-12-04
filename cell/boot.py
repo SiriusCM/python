@@ -3,11 +3,11 @@ import importlib
 from threading import Thread
 
 import account
-import cell.login as login
+import login
 import web
 
 
-async def tcp():
+async def main():
     importlib.reload(login)
     thread = Thread(target=web.create_server, args=('0.0.0.0', 8888))
     thread.start()
@@ -16,4 +16,4 @@ async def tcp():
 
 
 if __name__ == '__main__':
-    asyncio.run(tcp())
+    asyncio.run(main())
