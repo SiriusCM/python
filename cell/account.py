@@ -21,9 +21,9 @@ class Account(asyncio.Protocol):
 msgIdDict = {}
 
 
-def route(msgid):
+def route(msg_id):
     def handler(fn):
-        msgIdDict[msgid] = fn
+        msgIdDict[msg_id] = fn
         return fn
 
     return handler

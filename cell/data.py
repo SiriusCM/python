@@ -1,5 +1,5 @@
-import pymysql
 import redis
+from pymysql.cursors import DictCursor
 from sqlalchemy import create_engine
 
 redis_db = redis.Redis(host='10.77.38.129', port=6379, password='N2kH5lJVJLAHWObs')
@@ -15,7 +15,7 @@ engine = create_engine(
 
 def execute(sql):
     conn = engine.raw_connection()
-    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    cursor = conn.cursor(DictCursor)
     cursor.execute(sql)
     rets = cursor.fetchall()
     return rets

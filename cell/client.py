@@ -4,7 +4,7 @@ import msg.person_pb2
 
 
 async def tcp_client():
-    reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+    reader, writer = await asyncio.open_connection('127.0.0.1', 9999)
 
     person = msg.person_pb2.Person()
     person.id = 5
