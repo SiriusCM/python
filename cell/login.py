@@ -5,7 +5,8 @@ import event
 import msg.person_pb2 as person_pb2
 from account import Account, route
 
-confCoops = pandas.read_excel('conf/Coop.xlsx', sheet_name='协力者|Coop', header=2, index_col=0)
+# confCoops = pandas.read_excel('conf/Coop.xlsx', sheet_name='协力者|Coop', header=2, index_col=0)
+confCoops = pandas.read_excel('http://127.0.0.1/Coop.xlsx', sheet_name='协力者|Coop', header=2, index_col=0)
 
 
 @route(1101)
