@@ -1,21 +1,22 @@
 import asyncio
 
+from cell.scene import RoleObject, SceneObject
 
-class Account(asyncio.Protocol):
+
+class Transport(asyncio.Protocol):
     def connection_made(self, transport):
-        self.transport = transport
+        self.role = RoleObject(transport)
+        self.role.scene = SceneObject()
+        self.role.scene.create()
 
     def data_received(self, data):
         msgid = int.from_bytes(data[0:4], byteorder='little')
         message = data[4:]
         handler = msgIdDict[msgid]
-        handler(self, message)
+        self.role.scene.addConsumer(lambda: handler(self.role, message))
 
     def connection_lost(self, exc):
         pass
-
-    def write(self, data):
-        self.transport.write(data)
 
 
 msgIdDict = {}

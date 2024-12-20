@@ -12,8 +12,8 @@ def listen(key):
     return handler
 
 
-def fire(account, key):
+def fire(role, key):
     if key not in eventDict:
         return
     for name in eventDict[key]:
-        eventDict[key][name](account)
+        eventDict[key][name](role)
