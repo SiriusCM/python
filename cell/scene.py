@@ -1,6 +1,5 @@
 import time
 from queue import Queue
-from threading import Thread
 
 scenes = []
 
@@ -30,8 +29,7 @@ class SceneObject(WorldObject):
     worldObjects = []
 
     def create(self):
-        thread = Thread(target=self.pulse, args=())
-        thread.start()
+        scenes.append(SceneObject())
 
     def pulse(self):
         while self.consumer.not_empty:
@@ -41,3 +39,6 @@ class SceneObject(WorldObject):
 
     def addConsumer(self, fun):
         self.consumer.put(fun)
+
+    def enterWorld(self, worldObject):
+        self.worldObjects.append(worldObject)
