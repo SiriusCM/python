@@ -1,6 +1,6 @@
 import asyncio
 
-from cell.scene import RoleObject, SceneObject
+from scene import RoleObject, SceneObject
 
 
 class Transport(asyncio.Protocol):
