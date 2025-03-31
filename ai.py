@@ -2,6 +2,9 @@ import matplotlib.pyplot
 import torch
 import torchvision
 
+# device = torch.device("cuda:0")
+device = torch.device("cpu")
+
 
 class Net(torch.nn.Module):
 
@@ -31,8 +34,8 @@ def evaluate(test_data, net):
     n_total = 0
     with torch.no_grad():
         for (x, y) in test_data:
-            x = x.cuda()
-            outputs = net.forward(x.view(-1, 28 * 28)).cuda()
+            x = x.to(device)
+            outputs = net.forward(x.view(-1, 28 * 28)).to(device)
             for i, output in enumerate(outputs):
                 if torch.argmax(output) == y[i]:
                     n_correct += 1
@@ -41,12 +44,10 @@ def evaluate(test_data, net):
 
 
 def main():
-    # device = torch.device("cuda:0")
-    # device = torch.device("cpu")
     train_data = get_data_loader(is_train=True)
     test_data = get_data_loader(is_train=False)
 
-    net = Net().cuda()
+    net = Net().to(device)
     print("initial accuracy:", evaluate(test_data, net))
     optimizer = torch.optim.Adam(net.parameters(), lr=0.001)
 
@@ -54,10 +55,10 @@ def main():
         for (x, y) in train_data:
             net.zero_grad()
 
-            x = x.cuda()
+            x = x.to(device)
             x = net.forward(x.view(-1, 28 * 28))
-            y = y.cuda()
-            loss = torch.nn.functional.nll_loss(x, y).cuda()
+            y = y.to(device)
+            loss = torch.nn.functional.nll_loss(x, y).to(device)
 
             loss.backward()
             optimizer.step()
@@ -67,9 +68,9 @@ def main():
             break
         p = x[0]
 
-        x = x.cuda()
+        x = x.to(device)
         x = net.forward(x[0].view(-1, 28 * 28))
-        predict = torch.argmax(x).cuda()
+        predict = torch.argmax(x).to(device)
 
         matplotlib.pyplot.figure(n)
         matplotlib.pyplot.imshow(p.view(28, 28))
