@@ -3,171 +3,172 @@ import sys
 import win32gui
 import win32con
 import win32api
-import math
+
+# 初始化 Pygame
+pygame.init()
+
+# ------------------ 配置参数 ------------------
+WINDOW_WIDTH = 800  # 窗口宽度
+WINDOW_HEIGHT = 600  # 窗口高度
+SPRITE_SHEET_PATH = "R-C.png"  # 精灵表路径
+FPS = 15  # 播放帧率
 
 
-class StickMan:
-    def __init__(self, x, y, size=40):
+# ------------------ 工具函数 ------------------
+def create_transparent_window(width, height, title="Sprite Widget"):
+    """创建透明、置顶、可拖动的窗口"""
+    screen = pygame.display.set_mode((width, height), pygame.NOFRAME)
+    pygame.display.set_caption(title)
+
+    hwnd = pygame.display.get_wm_info()["window"]
+
+    # 设置窗口置顶
+    win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
+                          win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
+
+    # 设置透明（黑色为透明色）
+    win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE,
+                           win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE) | win32con.WS_EX_LAYERED)
+    win32gui.SetLayeredWindowAttributes(hwnd, win32api.RGB(0, 0, 0), 0, win32con.LWA_COLORKEY)
+
+    return screen, hwnd
+
+
+def load_sprite_sheet(path, frame_width=80, frame_height=80):
+    """加载精灵表并按行分割为不同动作"""
+    try:
+        sheet = pygame.image.load(path).convert_alpha()
+    except pygame.error as e:
+        print(f"无法加载精灵表: {e}")
+        sys.exit(1)
+
+    sheet_width, sheet_height = sheet.get_width(), sheet.get_height()
+    rows = sheet_height // frame_height
+    cols = sheet_width // frame_width
+
+    print(f"精灵表尺寸: {sheet_width}x{sheet_height}")
+    print(f"每帧尺寸: {frame_width}x{frame_height}")
+    print(f"可容纳帧数: {rows}行 x {cols}列")
+
+    # 假设第一行为向右移动，第二行为向左移动
+    animations = {
+        'right': [],
+        'left': []
+    }
+
+    for row in range(rows):
+        direction = 'right' if row == 0 else 'left'
+        for col in range(cols):
+            x = col * frame_width
+            y = row * frame_height
+            if x + frame_width <= sheet_width and y + frame_height <= sheet_height:
+                frame = sheet.subsurface(pygame.Rect(x, y, frame_width, frame_height))
+                animations[direction].append(frame)
+            else:
+                print(f"警告: 忽略超出边界的帧: ({x}, {y})")
+
+    return animations
+
+
+# ------------------ 角色类 ------------------
+class Character:
+    def __init__(self, animations, x, y, speed=5):
+        self.animations = animations
         self.x = x
         self.y = y
-        self.size = size
-        self.direction = 1  # 1 for right, -1 for left
-        self.speed = 2
-        self.step = 0
-        self.max_step = 10
+        self.speed = speed
+        self.direction = 'right'  # 初始方向
+        self.current_frame = 0
+        self.frame_count = len(animations['right'])
+        self.animation_speed = 0.2  # 动画播放速度
+        self.frame_timer = 0
 
-    def update(self):
-        # 移动火柴人
-        self.x += self.speed * self.direction
+    def update(self, screen_width):
+        # 移动角色
+        if self.direction == 'right':
+            self.x += self.speed
+            if self.x > screen_width:  # 到达右边界，转向左
+                self.x = screen_width
+                self.direction = 'left'
+        else:  # 向左移动
+            self.x -= self.speed
+            if self.x < 0:  # 到达左边界，转向右
+                self.x = 0
+                self.direction = 'right'
 
-        # 更新动画步长
-        self.step = (self.step + 1) % self.max_step
-
-        # 边界检测，到达边界时改变方向
-        if self.x > 200 - self.size // 2:
-            self.direction = -1
-        elif self.x < self.size // 2:
-            self.direction = 1
+        # 更新动画帧
+        self.frame_timer += self.animation_speed
+        if self.frame_timer >= 1:
+            self.current_frame = (self.current_frame + 1) % self.frame_count
+            self.frame_timer = 0
 
     def draw(self, surface):
-        # 计算身体各部分的位置
-        head_radius = self.size // 6
-        body_length = self.size // 2
-        leg_length = self.size // 3
-        arm_length = self.size // 3
-
-        # 头部
-        pygame.draw.circle(surface, (255, 255, 255), (self.x, self.y - body_length - head_radius), head_radius)
-
-        # 身体
-        pygame.draw.line(surface, (255, 255, 255),
-                         (self.x, self.y - body_length),
-                         (self.x, self.y), 2)
-
-        # 腿部动画
-        leg_angle = math.sin(self.step * 0.3) * 0.5
-
-        # 左腿
-        pygame.draw.line(surface, (255, 255, 255),
-                         (self.x, self.y),
-                         (self.x - math.sin(leg_angle) * leg_length,
-                          self.y + math.cos(leg_angle) * leg_length), 2)
-
-        # 右腿
-        pygame.draw.line(surface, (255, 255, 255),
-                         (self.x, self.y),
-                         (self.x + math.sin(leg_angle + math.pi) * leg_length,
-                          self.y + math.cos(leg_angle + math.pi) * leg_length), 2)
-
-        # 手臂动画
-        arm_angle = math.sin(self.step * 0.3 + math.pi) * 0.5
-
-        # 左臂
-        pygame.draw.line(surface, (255, 255, 255),
-                         (self.x, self.y - body_length // 2),
-                         (self.x - math.sin(arm_angle) * arm_length,
-                          self.y - body_length // 2 + math.cos(arm_angle) * arm_length), 2)
-
-        # 右臂
-        pygame.draw.line(surface, (255, 255, 255),
-                         (self.x, self.y - body_length // 2),
-                         (self.x + math.sin(arm_angle + math.pi) * arm_length,
-                          self.y - body_length // 2 + math.cos(arm_angle + math.pi) * arm_length), 2)
+        current_animation = self.animations[self.direction]
+        current_frame = current_animation[self.current_frame]
+        # 绘制在屏幕最下方
+        surface.blit(current_frame, (
+            self.x - current_frame.get_width() // 2,
+            self.y - current_frame.get_height()
+        ))
 
 
-class Widget:
-    def __init__(self, width=300, height=100, title="火柴人小组件", transparent=True):
-        # 初始化Pygame
-        pygame.init()
+# ------------------ 主逻辑 ------------------
+def main():
+    screen, hwnd = create_transparent_window(WINDOW_WIDTH, WINDOW_HEIGHT)
 
-        # 设置窗口
-        self.width = width
-        self.height = height
-        self.screen = pygame.display.set_mode((width, height), pygame.NOFRAME)
-        pygame.display.set_caption(title)
+    # 加载精灵表（默认帧大小80x80）
+    animations = load_sprite_sheet(SPRITE_SHEET_PATH)
 
-        # 获取窗口句柄并设置属性
-        hwnd = pygame.display.get_wm_info()["window"]
+    # 创建角色（放在屏幕底部中央）
+    character = Character(
+        animations=animations,
+        x=WINDOW_WIDTH // 2,
+        y=WINDOW_HEIGHT,  # 底部位置
+        speed=3
+    )
 
-        # 设置窗口置顶
-        win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
-                              win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
+    clock = pygame.time.Clock()
+    dragging = False
+    offset_x, offset_y = 0, 0
 
-        # 设置透明背景
-        if transparent:
-            # 设置窗口透明
-            win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE,
-                                   win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE) | win32con.WS_EX_LAYERED)
-            # 设置透明颜色 (这里使用黑色作为透明色)
-            win32gui.SetLayeredWindowAttributes(hwnd, win32api.RGB(0, 0, 0), 0, win32con.LWA_COLORKEY)
-
-        # 窗口移动相关变量
-        self.dragging = False
-        self.offset_x = 0
-        self.offset_y = 0
-
-        # 创建火柴人对象，位于屏幕底部中间
-        self.stick_man = StickMan(width // 2, height - 10)
-
-        # 主循环控制变量
-        self.running = True
-
-        # 时钟对象，控制帧率
-        self.clock = pygame.time.Clock()
-
-    def handle_events(self):
+    running = True
+    while running:
+        # 处理事件
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.running = False
+                running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:  # 左键点击
-                    self.dragging = True
-                    self.offset_x = event.pos[0]
-                    self.offset_y = event.pos[1]
+                if event.button == 1:
+                    dragging = True
+                    offset_x = event.pos[0]
+                    offset_y = event.pos[1]
             elif event.type == pygame.MOUSEBUTTONUP:
-                if event.button == 1:  # 左键释放
-                    self.dragging = False
+                if event.button == 1:
+                    dragging = False
             elif event.type == pygame.MOUSEMOTION:
-                if self.dragging:
-                    hwnd = pygame.display.get_wm_info()["window"]
+                if dragging:
                     x, y = win32gui.GetCursorPos()
                     win32gui.SetWindowPos(hwnd, None,
-                                          x - self.offset_x,
-                                          y - self.offset_y,
+                                          x - offset_x, y - offset_y,
                                           0, 0,
                                           win32con.SWP_NOSIZE | win32con.SWP_NOZORDER)
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    self.running = False
+                    running = False
 
-    def update(self):
-        # 更新火柴人状态
-        self.stick_man.update()
+        # 更新角色
+        character.update(WINDOW_WIDTH)
 
-    def render(self):
-        # 清空屏幕（使用黑色作为透明色）
-        self.screen.fill((0, 0, 0))
+        # 绘制
+        screen.fill((0, 0, 0))  # 填充黑色（透明色）
+        character.draw(screen)  # 绘制角色
 
-        # 绘制火柴人
-        self.stick_man.draw(self.screen)
-
-        # 绘制底部横线作为地面
-        pygame.draw.line(self.screen, (255, 255, 255), (0, self.height - 5), (self.width, self.height - 5), 2)
-
-        # 更新显示
         pygame.display.flip()
+        clock.tick(FPS)
 
-    def run(self):
-        while self.running:
-            self.handle_events()
-            self.update()
-            self.render()
-            self.clock.tick(30)  # 限制帧率为30FPS
-
-        pygame.quit()
-        sys.exit()
+    pygame.quit()
+    sys.exit()
 
 
 if __name__ == "__main__":
-    widget = Widget(width=300, height=100, title="火柴人小组件")
-    widget.run()
+    main()
