@@ -19,7 +19,7 @@ async def task(name: str, msg: str):
 
 async def main():
     list = []
-    for i in range(2):
+    for i in range(1000):
         t = task('gao' + str(i), str(i))
         list.append(t)
     await asyncio.gather(*list)
