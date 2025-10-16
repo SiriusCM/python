@@ -2,23 +2,19 @@ import pandas as pd
 import os
 import sys
 import tkinter as tk
-from tkinter import filedialog
-from tkinter import messagebox
+from tkinter import filedialog, messagebox
+from tkinterdnd2 import TkinterDnD, DND_FILES  # 改用第三方拖拽库
 
 
 def get_output_dir():
     """获取正确的输出目录（适配打包后环境）"""
     if getattr(sys, 'frozen', False):
-        # 打包后的环境（PyInstaller）
         if sys.platform == 'darwin':  # macOS
-            # 获取程序所在目录（.app 包的上层目录）
             exe_path = os.path.dirname(sys.executable)
-            # macOS 下 .app 内部路径为 .../Contents/MacOS/，需返回上两级到 .app 所在目录
             return os.path.abspath(os.path.join(exe_path, '../..'))
         else:  # Windows
             return os.path.dirname(sys.executable)
     else:
-        # 未打包的开发环境
         return os.path.dirname(os.path.abspath(__file__))
 
 
@@ -49,7 +45,6 @@ def excel_to_java_classes(excel_path):
 
     try:
         excel = pd.ExcelFile(excel_path)
-        # 获取正确的输出目录（关键修复）
         output_dir = get_output_dir()
 
         for sheet_name in excel.sheet_names:
@@ -81,15 +76,13 @@ def excel_to_java_classes(excel_path):
 
 
 def handle_drop(event):
-    # 修复macOS下拖拽路径包含空格的问题
-    file_paths = event.data.split('\n')  # macOS 拖拽路径用换行分隔
-    for file_path in file_paths:
-        file_path = file_path.strip().strip('"')
-        if os.path.isfile(file_path) and file_path.lower().endswith(('.xlsx', '.xls')):
-            result = excel_to_java_classes(file_path)
-            messagebox.showinfo("处理结果", result)
-        elif file_path:  # 忽略空字符串
-            messagebox.showerror("错误", f"无效文件: {file_path}")
+    """处理拖拽文件（使用tkinterdnd2的事件格式）"""
+    file_path = event.data.strip().strip('{}').strip('"')
+    if os.path.isfile(file_path) and file_path.lower().endswith(('.xlsx', '.xls')):
+        result = excel_to_java_classes(file_path)
+        messagebox.showinfo("处理结果", result)
+    elif file_path:
+        messagebox.showerror("错误", f"无效文件: {file_path}")
 
 
 def select_files():
@@ -100,18 +93,26 @@ def select_files():
             messagebox.showinfo("处理结果", result)
 
 
-root = tk.Tk()
-root.title("Excel 转 Java 类工具")
-root.geometry("400x200")
+if __name__ == "__main__":
+    # 使用TkinterDnD替代原生Tk，解决拖拽兼容性问题
+    root = TkinterDnD.Tk()
+    root.title("Excel 转 Java 类工具")
+    root.geometry("400x200")
 
-# 配置拖拽支持（适配macOS）
-root.drop_target_register(tk.DND_FILES)
-root.dnd_bind('<<Drop>>', handle_drop)
+    # 配置拖拽（第三方库的标准用法）
+    root.drop_target_register(DND_FILES)
+    root.dnd_bind('<<Drop>>', handle_drop)
 
-label = tk.Label(root, text="将 Excel 文件拖拽到此窗口或点击下面的按钮选择文件", font=("Arial", 12))
-label.pack(pady=20)
+    # 界面元素
+    label = tk.Label(
+        root,
+        text="将 Excel 文件拖拽到此窗口或点击下面的按钮选择文件",
+        font=("Arial", 12),
+        wraplength=350
+    )
+    label.pack(pady=20)
 
-select_button = tk.Button(root, text="选择文件", command=select_files)
-select_button.pack(pady=10)
+    select_button = tk.Button(root, text="选择文件", command=select_files, width=15, height=2)
+    select_button.pack(pady=10)
 
-root.mainloop()
+    root.mainloop()
