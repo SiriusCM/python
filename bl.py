@@ -37,6 +37,7 @@ def query_server(server_id, host, port, seven_days_ts, three_days_ts):
         "30级": None,
         "80级": None,
         "130级": None,
+        "130级且3天内登录": None  # 新增指标：130级且最近三天登录的人数
     }
 
     # 数据库连接参数
@@ -55,7 +56,7 @@ def query_server(server_id, host, port, seven_days_ts, three_days_ts):
         conn = pymysql.connect(**db_config)
         cursor = conn.cursor()
 
-        # SQL使用Python计算的时间戳，避免依赖MySQL的时间函数
+        # SQL使用Python计算的时间戳，新增130级且3天内登录的统计条件
         query = f"""
             SELECT 
                 -- 7天前0点至今（使用Python计算的时间戳）
@@ -66,14 +67,17 @@ def query_server(server_id, host, port, seven_days_ts, three_days_ts):
                 SUM(CASE WHEN `level` >= 10 THEN 1 ELSE 0 END) AS `10级`,
                 SUM(CASE WHEN `level` >= 30 THEN 1 ELSE 0 END) AS `30级`,
                 SUM(CASE WHEN `level` >= 80 THEN 1 ELSE 0 END) AS `80级`,
-                SUM(CASE WHEN `level` >= 130 THEN 1 ELSE 0 END) AS `130级`
+                SUM(CASE WHEN `level` >= 130 THEN 1 ELSE 0 END) AS `130级`,
+                -- 新增：等级≥130级 且 最近3天有登录（last_save_time≥3天前时间戳）
+                SUM(CASE WHEN `level` >= 130 AND last_save_time >= {three_days_ts} THEN 1 ELSE 0 END) AS `130级且3天内登录`
             FROM role
         """
         cursor.execute(query)
         counts = cursor.fetchone()
 
         if counts:
-            result["7天前至今"], result["3天前至今"], result["10级"], result["30级"], result["80级"], result["130级"] = counts
+            # 修复：一行完成赋值，避免换行导致的解包错误
+            result["7天前至今"], result["3天前至今"], result["10级"], result["30级"], result["80级"], result["130级"], result["130级且3天内登录"] = counts
 
         logging.debug(f"服务器 {server_id} 查询完成")
 
@@ -126,6 +130,7 @@ def batch_query_and_save_excel():
                 all_results.append(result)
             except Exception as e:
                 logging.error(f"服务器 {sid} 线程执行错误: {e}")
+                # 失败时也需要填充新增字段
                 all_results.append({
                     "服务器序号": sid,
                     "7天前至今": None,
@@ -134,6 +139,7 @@ def batch_query_and_save_excel():
                     "30级": None,
                     "80级": None,
                     "130级": None,
+                    "130级且3天内登录": None
                 })
 
     # 按服务器序号排序
@@ -142,9 +148,11 @@ def batch_query_and_save_excel():
     # 生成Excel
     try:
         df = pd.DataFrame(all_results)
+        # 新增字段到列顺序中
         columns_order = [
             "服务器序号", "7天前至今", "3天前至今",
-            "10级", "30级", "80级", "130级"
+            "10级", "30级", "80级", "130级",
+            "130级且3天内登录"  # 新增列
         ]
         df = df[columns_order]
         df.to_excel(output_file, index=False, engine="openpyxl")
