@@ -2,19 +2,15 @@ import matplotlib.pyplot
 import torch
 import torchvision
 
-device = torch.device("cuda:0")
+transform = torchvision.transforms.ToTensor()
+train_dataset = torchvision.datasets.MNIST("", True, transform=transform, download=True)
+test_dataset = torchvision.datasets.MNIST("", False, transform=transform, download=True)
 
+train_data = torch.utils.data.DataLoader(train_dataset, batch_size=100, shuffle=True)
+test_data = torch.utils.data.DataLoader(test_dataset, batch_size=100, shuffle=True)
 
-# device = torch.device("cpu")
-
-def get_data_loader(is_train):
-    to_tensor = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
-    data_set = torchvision.datasets.MNIST("", is_train, transform=to_tensor, download=True)
-    return torch.utils.data.DataLoader(data_set, batch_size=512, shuffle=True)
-
-
-train_data = get_data_loader(is_train=True)
-test_data = get_data_loader(is_train=False)
+# device = torch.device("cuda:0")
+device = torch.device("cpu")
 
 
 class VisionModel(torch.nn.Module):
@@ -40,7 +36,7 @@ def vision_evaluate(vm: VisionModel):
     with torch.no_grad():
         for (img, label) in test_data:
             img = img.to(device)
-            predicts = vm.forward(img.view(-1, 28 * 28))
+            predicts = vm.forward(img.view(100, 28 * 28))
             for i, predict in enumerate(predicts):
                 if torch.argmax(predict) == label[i]:
                     n_correct += 1
@@ -91,12 +87,14 @@ def main():
     # torch.save(vm.state_dict(), 'visionModel_dict.pth')
     # torch.save(vm, "visionModel.pth")
 
-    # vm = VisionModel().to(device)
-    # vm.load_state_dict(torch.load("visionModel_dict.pth", map_location=device))
+    vm = VisionModel().to(device)
     # vision_test(vm)
-
-    vm = torch.load("visionModel.pth", map_location=device, weights_only=False)
+    vm.load_state_dict(torch.load("visionModel_dict.pth", map_location=device))
     vision_test(vm)
+
+    # vm = torch.load("visionModel.pth", map_location=device, weights_only=False)
+    # vision_test(vm)
+    pass
 
 
 if __name__ == "__main__":
