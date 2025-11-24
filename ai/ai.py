@@ -82,15 +82,15 @@ def vision_test(vm: VisionModel):
 
 
 def main():
-    # vm = vision_train(1)
-    #
-    # torch.save(vm.state_dict(), 'visionModel_dict.pth')
-    # torch.save(vm, "visionModel.pth")
+    vm = vision_train(1)
 
-    vm = VisionModel().to(device)
+    torch.save(vm.state_dict(), 'visionModel_dict.pth')
+    torch.save(vm, "visionModel.pth")
+
+    # vm = VisionModel().to(device)
     # vision_test(vm)
-    vm.load_state_dict(torch.load("visionModel_dict.pth", map_location=device))
-    vision_test(vm)
+    # vm.load_state_dict(torch.load("visionModel_dict.pth", map_location=device))
+    # vision_test(vm)
 
     # vm = torch.load("visionModel.pth", map_location=device, weights_only=False)
     # vision_test(vm)
