@@ -57,7 +57,7 @@ class HandwritingRecognitionApp:
         # UI组件
         self.canvas_width = 280
         self.canvas_height = 280
-        self.brush_size = 10
+        self.brush_size = 6
 
         # 画布
         self.canvas = tk.Canvas(root, width=self.canvas_width, height=self.canvas_height, bg="white",
