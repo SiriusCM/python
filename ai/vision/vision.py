@@ -9,8 +9,8 @@ test_dataset = torchvision.datasets.MNIST("", False, transform=transform, downlo
 train_data = torch.utils.data.DataLoader(train_dataset, batch_size=100, shuffle=True)
 test_data = torch.utils.data.DataLoader(test_dataset, batch_size=100, shuffle=True)
 
-# device = torch.device("cuda:0")
-device = torch.device("cpu")
+device = torch.device("cuda:0")
+# device = torch.device("cpu")
 
 
 class VisionModel(torch.nn.Module):
@@ -82,8 +82,8 @@ def vision_test(model: VisionModel):
 
 
 def main():
-    # model = vision_train(5)
-    model = VisionModel()
+    model = vision_train(5)
+    # model = VisionModel()
 
     torch.save(model.state_dict(), 'visionModel_dict.pth')
     torch.save(model, "visionModel.pth")
