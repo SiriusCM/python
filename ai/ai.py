@@ -30,13 +30,13 @@ class VisionModel(torch.nn.Module):
         return o
 
 
-def vision_evaluate(vm: VisionModel):
+def vision_evaluate(model: VisionModel):
     n_correct = 0
     n_total = 0
     with torch.no_grad():
         for (img, label) in test_data:
             img = img.to(device)
-            predicts = vm.forward(img.view(100, 28 * 28))
+            predicts = model.forward(img.view(100, 28 * 28))
             for i, predict in enumerate(predicts):
                 if torch.argmax(predict) == label[i]:
                     n_correct += 1
@@ -45,34 +45,34 @@ def vision_evaluate(vm: VisionModel):
 
 
 def vision_train(times: int):
-    vm = VisionModel().to(device)
-    print("initial accuracy:", vision_evaluate(vm))
-    optimizer = torch.optim.Adam(vm.parameters(), lr=0.001)
+    model = VisionModel().to(device)
+    print("initial accuracy:", vision_evaluate(model))
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     for epoch in range(times):
         for (img, label) in train_data:
             img = img.to(device)
             label = label.to(device)
 
-            vm.zero_grad()
-            predicts = vm.forward(img.view(-1, 28 * 28))
+            model.zero_grad()
+            predicts = model.forward(img.view(-1, 28 * 28))
 
             loss = torch.nn.functional.nll_loss(predicts, label)
             loss.backward()
 
             optimizer.step()
-        print("epoch", epoch, "accuracy:", vision_evaluate(vm))
-    return vm
+        print("epoch", epoch, "accuracy:", vision_evaluate(model))
+    return model
 
 
-def vision_test(vm: VisionModel):
-    vm.eval()
+def vision_test(model: VisionModel):
+    model.eval()
     for (batch, (img, label)) in enumerate(test_data):
         if batch > 3:
             break
 
         x = img[0].to(device)
-        predict = vm.forward(x.view(-1, 28 * 28))
+        predict = model.forward(x.view(-1, 28 * 28))
         label = torch.argmax(predict)
 
         matplotlib.pyplot.figure(batch)
@@ -82,18 +82,20 @@ def vision_test(vm: VisionModel):
 
 
 def main():
-    vm = vision_train(1)
+    # model = vision_train(5)
+    model = VisionModel()
 
-    torch.save(vm.state_dict(), 'visionModel_dict.pth')
-    torch.save(vm, "visionModel.pth")
+    torch.save(model.state_dict(), 'visionModel_dict.pth')
+    torch.save(model, "visionModel.pth")
 
-    # vm = VisionModel().to(device)
-    # vision_test(vm)
-    # vm.load_state_dict(torch.load("visionModel_dict.pth", map_location=device))
-    # vision_test(vm)
-
-    # vm = torch.load("visionModel.pth", map_location=device, weights_only=False)
-    # vision_test(vm)
+    # model = VisionModel().to(device)
+    # vision_test(model)
+    #
+    # model.load_state_dict(torch.load("visionModel_dict.pth", map_location=device))
+    # vision_test(model)
+    #
+    # model = torch.load("visionModel.pth", map_location=device, weights_only=False)
+    # vision_test(model)
     pass
 
 
