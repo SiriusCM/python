@@ -2,27 +2,10 @@ import tkinter as tk
 from PIL import Image, ImageDraw
 import torch
 from torchvision import transforms
+from vision import VisionModel
 
 
-# --- 1. 模型定义 ---
-# 必须先定义模型结构，否则无法加载权重
-class VisionModel(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.fc1 = torch.nn.Linear(28 * 28, 64)
-        self.fc2 = torch.nn.Linear(64, 64)
-        self.fc3 = torch.nn.Linear(64, 64)
-        self.fc4 = torch.nn.Linear(64, 10)
-
-    def forward(self, x):
-        x = torch.nn.functional.relu(self.fc1(x))
-        x = torch.nn.functional.relu(self.fc2(x))
-        x = torch.nn.functional.relu(self.fc3(x))
-        x = torch.nn.functional.log_softmax(self.fc4(x), dim=1)
-        return x
-
-
-# --- 2. 图像预处理 ---
+# --- 1. 图像预处理 ---
 def preprocess_image(image):
     """将PIL图像预处理成模型所需的28x28灰度张量"""
     preprocess = transforms.Compose([
@@ -37,7 +20,7 @@ def preprocess_image(image):
     return img_tensor.view(-1, 28 * 28)
 
 
-# --- 3. 手写绘画板应用 ---
+# --- 2. 手写绘画板应用 ---
 class HandwritingRecognitionApp:
     def __init__(self, root, model_path="visionModel_dict.pth"):
         self.root = root
@@ -119,7 +102,7 @@ class HandwritingRecognitionApp:
         self.result_label.config(text=f"识别结果: {pred}", fg="blue")
 
 
-# --- 4. 运行应用 ---
+# --- 3. 运行应用 ---
 if __name__ == "__main__":
     root = tk.Tk()
     app = HandwritingRecognitionApp(root)
