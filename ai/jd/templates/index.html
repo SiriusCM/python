@@ -3,7 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>京东云AI 流式对话</title>
+    <title>代码翻译工具（原生极简版）</title>
+    <!-- 仅引入Prism核心，不额外干预 -->
+    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-c.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-cpp.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-assembly.min.js"></script>
+
     <style>
         * {
             margin: 0;
@@ -13,180 +25,376 @@
         }
 
         body {
-            background: #f5f7fa;
+            background: #1e1e1e;
             padding: 20px;
+            height: 100vh;
+            overflow: hidden;
+            color: #fff;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 1400px;
             margin: 0 auto;
-            background: white;
+            background: #2d2d2d;
             border-radius: 12px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
-            padding: 30px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            height: 100%;
+            display: flex;
+            gap: 20px;
+        }
+
+        .section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #444;
         }
 
         h2 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 25px;
+            color: #ccc;
         }
 
-        .chat-box {
-            height: 550px;
-            overflow-y: auto;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            background: #f9fafb;
-        }
-
-        .msg {
-            margin-bottom: 18px;
-            padding: 12px 18px;
-            border-radius: 18px;
-            max-width: 75%;
-            word-wrap: break-word;
-            line-height: 1.5;
-            font-size: 15px;
-        }
-
-        .user-msg {
-            background: #0078ff;
-            color: white;
-            margin-left: auto;
-            border-bottom-right-radius: 4px;
-        }
-
-        .ai-msg {
-            background: #f1f1f1;
-            color: #333;
-            margin-right: auto;
-            border-bottom-left-radius: 4px;
-        }
-
-        .input-wrap {
+        .header-actions {
             display: flex;
             gap: 10px;
+            align-items: center;
         }
 
-        #msg-input {
+        select {
+            padding: 8px 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #333;
+            color: #ccc;
+        }
+
+        .copy-btn {
+            padding: 8px 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #333;
+            color: #ccc;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .copy-btn:hover {
+            background: #444;
+        }
+
+        .copy-btn.copied {
+            background: #0f5132;
+            border-color: #137333;
+            color: #d1e7dd;
+        }
+
+        .code-box {
             flex: 1;
-            padding: 14px 16px;
-            border: 1px solid #e5e7eb;
+            border: 1px solid #444;
             border-radius: 8px;
-            font-size: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 核心：完全原生textarea，仅取消代码紧凑 */
+        #source-code {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 15px;
+            border: none;
             outline: none;
+            resize: none;
+            font-family: "Consolas", "Monaco", "Menlo", monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            tab-size: 4;
+            /* 仅这一行解决代码紧凑问题 */
+            white-space: pre;
+            background: #1e1e1e;
+            color: #f8f8f2;
+            caret-color: #f8f8f2;
+            z-index: 2;
         }
 
-        #msg-input:focus {
-            border-color: #0078ff;
-            box-shadow: 0 0 0 2px rgba(0,120,255,0.1);
+        /* 高亮层仅显示颜色，不干预输入 */
+        #source-highlight {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 15px;
+            margin: 0;
+            font-family: "Consolas", "Monaco", "Menlo", monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            tab-size: 4;
+            /* 仅这一行解决代码紧凑问题 */
+            white-space: pre;
+            background: #1e1e1e;
+            overflow: auto;
+            z-index: 1;
+            pointer-events: none;
         }
 
-        #send-btn {
-            padding: 14px 28px;
-            background: #0078ff;
+        #result-code {
+            flex: 1;
+            padding: 15px;
+            margin: 0;
+            background: #1e1e1e;
+            overflow-y: auto;
+            font-family: "Consolas", "Monaco", "Menlo", monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            tab-size: 4;
+            white-space: pre;
+        }
+
+        #translate-btn {
+            margin-top: 15px;
+            padding: 12px 24px;
+            background: #007acc;
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             font-size: 15px;
+            align-self: flex-end;
         }
 
-        #send-btn:disabled {
-            background: #6c757d;
+        #translate-btn:disabled {
+            background: #4a4a4a;
             cursor: not-allowed;
         }
 
         .loading {
-            color: #6c757d;
+            color: #888;
             font-style: italic;
+            padding: 15px;
+            font-size: 14px;
+        }
+
+        /* 仅禁用Prism代码压缩，无其他干预 */
+        pre[class*="language-"], code[class*="language-"] {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: transparent !important;
+            white-space: pre !important;
+            font-size: inherit !important;
+            line-height: inherit !important;
+        }
+
+        /* 滚动条原生样式 */
+        #source-code::-webkit-scrollbar, #source-highlight::-webkit-scrollbar, #result-code::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        #source-code::-webkit-scrollbar-thumb, #source-highlight::-webkit-scrollbar-thumb, #result-code::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
+        #source-code::-webkit-scrollbar-track, #source-highlight::-webkit-scrollbar-track, #result-code::-webkit-scrollbar-track {
+            background: #2d2d2d;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>京东云AI 流式对话</h2>
-        <div class="chat-box" id="chatBox"></div>
-        <div class="input-wrap">
-            <input type="text" id="msg-input" placeholder="输入问题按回车发送..." autocomplete="off">
-            <button id="send-btn">发送</button>
+<div class="container">
+    <!-- 左侧输入区域（完全原生） -->
+    <div class="section">
+        <div class="header">
+            <h2>源语言代码</h2>
+            <div class="header-actions">
+                <select id="source-lang">
+                    <option value="java">Java</option>
+                    <option value="python">Python</option>
+                    <option value="csharp">C#</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="go">Go</option>
+                    <option value="c">C</option>
+                    <option value="cpp">C++</option>
+                    <option value="assembly">汇编</option>
+                </select>
+                <button class="copy-btn" id="copy-source">
+                    <span>复制</span>
+                </button>
+            </div>
         </div>
+        <div class="code-box">
+            <!-- 完全原生textarea，无contenteditable，无额外事件 -->
+            <textarea id="source-code" placeholder="请输入代码..."></textarea>
+            <pre id="source-highlight"><code class="language-java"></code></pre>
+        </div>
+        <button id="translate-btn">翻译代码</button>
     </div>
 
-    <script>
-        const chatBox = document.getElementById('chatBox');
-        const msgInput = document.getElementById('msg-input');
-        const sendBtn = document.getElementById('send-btn');
+    <!-- 右侧输出区域 -->
+    <div class="section">
+        <div class="header">
+            <h2>目标语言代码</h2>
+            <div class="header-actions">
+                <select id="target-lang">
+                    <option value="python">Python</option>
+                    <option value="java">Java</option>
+                    <option value="csharp">C#</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="go">Go</option>
+                    <option value="c">C</option>
+                    <option value="cpp">C++</option>
+                    <option value="assembly">汇编</option>
+                </select>
+                <button class="copy-btn" id="copy-target">
+                    <span>复制</span>
+                </button>
+            </div>
+        </div>
+        <div class="code-box">
+            <pre id="result-code"><code class="language-python loading">翻译结果将显示在这里...</code></pre>
+        </div>
+    </div>
+</div>
 
-        // 核心逻辑：全量覆盖，彻底避免重复
-        function sendMsg() {
-            const msg = msgInput.value.trim();
-            if (!msg) return;
+<script>
+    // 仅保留核心逻辑：同步文本+高亮，无任何光标干预
+    const sourceCode = document.getElementById('source-code');
+    const sourceHighlight = document.getElementById('source-highlight').querySelector('code');
+    const resultCodeBlock = document.getElementById('result-code').querySelector('code');
+    const translateBtn = document.getElementById('translate-btn');
+    const sourceLang = document.getElementById('source-lang');
+    const targetLang = document.getElementById('target-lang');
+    const copySourceBtn = document.getElementById('copy-source');
+    const copyTargetBtn = document.getElementById('copy-target');
 
-            // 添加用户消息
-            addMsg('user', msg);
-            msgInput.value = '';
-            sendBtn.disabled = true;
+    // 仅同步文本+高亮，无防抖、无光标保存、无额外逻辑
+    function updateHighlight() {
+        sourceHighlight.textContent = sourceCode.value || ' ';
+        Prism.highlightElement(sourceHighlight, false);
+        // 仅同步滚动，无其他干预
+        sourceHighlight.parentElement.scrollTop = sourceCode.scrollTop;
+        sourceHighlight.parentElement.scrollLeft = sourceCode.scrollLeft;
+    }
 
-            // 创建AI消息容器（初始加载状态）
-            const aiMsg = addMsg('ai', '<span class="loading">AI正在回复...</span>');
-            let fullContent = ''; // 存储完整内容
+    // 原生输入事件，仅触发高亮
+    sourceCode.addEventListener('input', updateHighlight);
+    sourceCode.addEventListener('scroll', updateHighlight);
+    sourceLang.addEventListener('change', function() {
+        sourceHighlight.className = `language-${this.value}`;
+        updateHighlight();
+    });
 
-            // 发起请求
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', '/api/chat', true);
-            xhr.setRequestHeader('Content-Type', 'application/json');
+    // Tab键原生处理（仅插入空格，无额外逻辑）
+    sourceCode.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const start = this.selectionStart;
+            this.value = this.value.substring(0, start) + '    ' + this.value.substring(this.selectionEnd);
+            this.selectionStart = this.selectionEnd = start + 4;
+            updateHighlight();
+        }
+        // Ctrl+Enter翻译，无其他按键干预
+        else if (e.key === 'Enter' && e.ctrlKey) {
+            translateCode();
+        }
+    });
 
-            // 关键：每次收到新数据，全量覆盖
-            xhr.onprogress = function() {
-                fullContent = ''; // 清空，重新拼接
-                const chunks = xhr.responseText.split('\n\n').filter(chunk => chunk);
-
-                // 重新拼接所有有效内容
-                chunks.forEach(chunk => {
-                    if (chunk.startsWith('data: ')) {
-                        try {
-                            const data = JSON.parse(chunk.slice(6));
-                            if (data.type === 'content') {
-                                fullContent += data.content;
-                            }
-                        } catch (e) {}
-                    }
+    // 复制功能（原生）
+    function setupCopyButton(btn, getContent) {
+        btn.addEventListener('click', function() {
+            const content = getContent();
+            if (content) {
+                navigator.clipboard.writeText(content).then(() => {
+                    const original = this.innerHTML;
+                    this.innerHTML = '<span>已复制</span>';
+                    this.classList.add('copied');
+                    setTimeout(() => {
+                        this.innerHTML = original;
+                        this.classList.remove('copied');
+                    }, 2000);
                 });
+            }
+        });
+    }
+    setupCopyButton(copySourceBtn, () => sourceCode.value);
+    setupCopyButton(copyTargetBtn, () => resultCodeBlock.classList.contains('loading') ? '' : resultCodeBlock.textContent);
 
-                // 直接覆盖整个AI消息内容（核心！）
-                aiMsg.innerHTML = fullContent || '<span class="loading">AI正在回复...</span>';
-                chatBox.scrollTop = chatBox.scrollHeight;
-            };
+    // 翻译逻辑（保留原生）
+    function translateCode() {
+        const code = sourceCode.value.trim();
+        if (!code) return;
 
-            // 请求完成
-            xhr.onload = xhr.onerror = function() {
-                sendBtn.disabled = false;
-                // 最终覆盖（确保无残留）
-                aiMsg.innerHTML = fullContent || '未获取到回复';
-                chatBox.scrollTop = chatBox.scrollHeight;
-            };
+        translateBtn.disabled = true;
+        resultCodeBlock.textContent = '正在翻译中...';
+        resultCodeBlock.classList.add('loading');
+        resultCodeBlock.className = `language-${targetLang.value}`;
 
-            xhr.send(JSON.stringify({ message: msg }));
-        }
+        let fullContent = '';
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/translate', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
 
-        // 添加消息到聊天框
-        function addMsg(role, content) {
-            const div = document.createElement('div');
-            div.className = `msg ${role}-msg`;
-            div.innerHTML = content;
-            chatBox.appendChild(div);
-            chatBox.scrollTop = chatBox.scrollHeight;
-            return div;
-        }
+        xhr.onprogress = function() {
+            fullContent = '';
+            const chunks = xhr.responseText.split('\n\n').filter(chunk => chunk);
+            chunks.forEach(chunk => {
+                if (chunk.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(chunk.slice(6));
+                        if (data.type === 'content') fullContent += data.content;
+                    } catch (e) {}
+                }
+            });
+            if (fullContent) {
+                resultCodeBlock.textContent = fullContent;
+                resultCodeBlock.classList.remove('loading');
+                Prism.highlightElement(resultCodeBlock);
+            }
+        };
 
-        // 绑定事件
-        sendBtn.onclick = sendMsg;
-        msgInput.onkeypress = e => e.key === 'Enter' && sendMsg();
-        msgInput.focus();
-    </script>
+        xhr.onload = xhr.onerror = function() {
+            translateBtn.disabled = false;
+            if (xhr.status === 200) {
+                if (fullContent) {
+                    resultCodeBlock.textContent = fullContent;
+                    resultCodeBlock.classList.remove('loading');
+                    Prism.highlightElement(resultCodeBlock);
+                } else {
+                    resultCodeBlock.textContent = '未获取到翻译结果';
+                    resultCodeBlock.classList.add('loading');
+                }
+            } else {
+                resultCodeBlock.textContent = '翻译失败，请重试';
+                resultCodeBlock.classList.add('loading');
+            }
+        };
+
+        xhr.send(JSON.stringify({
+            code: code,
+            from_lang: sourceLang.value,
+            to_lang: targetLang.value
+        }));
+    }
+
+    // 仅绑定翻译按钮，无其他额外事件
+    translateBtn.onclick = translateCode;
+
+    // 初始化仅高亮一次，无焦点强制、无文本清空
+    updateHighlight();
+</script>
 </body>
 </html>

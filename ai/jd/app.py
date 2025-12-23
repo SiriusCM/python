@@ -111,9 +111,9 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/api/chat', methods=['POST', 'OPTIONS'])
-def chat():
-    """AI对话接口（流式）"""
+@app.route('/api/translate', methods=['POST', 'OPTIONS'])
+def translate_code():
+    """代码翻译接口（流式）"""
     # 处理预检请求
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
@@ -124,12 +124,21 @@ def chat():
         if not data:
             return jsonify({"error": "请求体必须为JSON格式"}), 400
 
-        message = data.get("message", "").strip()
-        if not message:
-            return jsonify({"error": "消息内容不能为空"}), 400
+        code = data.get("code", "").strip()
+        from_lang = data.get("from_lang", "java")
+        to_lang = data.get("to_lang", "python")
+
+        if not code:
+            return jsonify({"error": "代码内容不能为空"}), 400
+
+        # 构造翻译提示词
+        prompt = f"""请将以下{from_lang}代码翻译成{to_lang}代码，保持功能一致，不添加额外解释：
+
+{code}
+"""
 
         # 构造消息列表
-        messages = [{"role": "user", "content": message}]
+        messages = [{"role": "user", "content": prompt}]
 
         # 返回流式响应
         return Response(
@@ -137,7 +146,7 @@ def chat():
             mimetype='text/event-stream'
         )
     except Exception as e:
-        logging.error(f"Chat接口异常：{str(e)}", exc_info=True)
+        logging.error(f"Translate接口异常：{str(e)}", exc_info=True)
         return jsonify({"error": f"服务器内部错误：{str(e)}"}), 500
 
 
