@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能日志分析系统</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --panel-bg: #252526;
+            --border-color: #3e3e42;
+            --text-color: #cccccc;
+            --accent-color: #007acc;
+            --error-color: #f48771;
+            --success-color: #89d185;
+            --warning-color: #cca700;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: #333333;
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 50px;
+        }
+
+        h1 {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 50px);
+            overflow: hidden;
+        }
+
+        /* 左侧区域：日志输入 */
+        .left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            padding: 10px;
+            min-width: 300px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 0 5px;
+        }
+
+        .panel-title {
+            font-weight: bold;
+            color: #fff;
+        }
+
+        #log-input {
+            flex: 1;
+            background-color: var(--bg-color);
+            color: #d4d4d4;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+        }
+
+        #log-input:focus {
+            border-color: var(--accent-color);
+        }
+
+        #analyze-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        #analyze-btn:hover {
+            background-color: #0062a3;
+        }
+
+        #analyze-btn:disabled {
+            background-color: #4d4d4d;
+            cursor: not-allowed;
+        }
+
+        /* 右侧区域：分析结果 */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 300px;
+        }
+
+        /* 右上：总结与解释 */
+        .top-right {
+            flex: 1;
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            overflow-y: auto;
+            background-color: var(--panel-bg);
+        }
+
+        /* 右下：解决方案 */
+        .bottom-right {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: #1f1f1f;
+        }
+
+        .card {
+            background-color: #2d2d2d;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .card h3 {
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 16px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .error-log {
+            color: var(--error-color);
+            font-family: monospace;
+            background: #3a2525;
+            padding: 5px;
+            border-radius: 4px;
+            margin-top: 5px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .solution-step {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            background: var(--accent-color);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #888;
+            display: none;
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #424242;
+            border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4f4f4f;
+        }
+
+        .badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-error { background: #5a1d1d; color: #ff9999; }
+        .badge-info { background: #1d3b5a; color: #99ccff; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🛡️ 日志分析器</h1>
+        <button id="analyze-btn" onclick="analyzeLog()">开始分析</button>
+    </header>
+
+    <div class="main-container">
+        <!-- 左侧：日志输入 -->
+        <div class="left-panel">
+            <div class="panel-header">
+                <span class="panel-title">原始日志</span>
+                <span style="font-size: 12px; color: #888;">请粘贴日志内容</span>
+            </div>
+            <textarea id="log-input" placeholder="在此粘贴您的应用程序日志..."></textarea>
+        </div>
+
+        <!-- 右侧：分析结果 -->
+        <div class="right-panel">
+            <!-- 右上：总结和解释 -->
+            <div class="top-right" id="summary-panel">
+                <div class="panel-header">
+                    <span class="panel-title">📊 分析总结 & 错误详情</span>
+                </div>
+                <div id="summary-content">
+                    <div style="text-align: center; color: #666; margin-top: 50px;">
+                        暂无分析数据，请在左侧输入日志并点击“开始分析”
+                    </div>
+                </div>
+                <div class="loading" id="loading-indicator">
+                    分析中...
+                </div>
+            </div>
+
+            <!-- 右下：解决方案 -->
+            <div class="bottom-right" id="solution-panel">
+                <div class="panel-header">
+                    <span class="panel-title">💡 推荐解决方案</span>
+                </div>
+                <div id="solution-content">
+                    <div style="text-align: center; color: #666; margin-top: 50px;">
+                        等待分析结果...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function analyzeLog() {
+            const logContent = document.getElementById('log-input').value;
+            if (!logContent.trim()) {
+                alert("请先输入日志内容");
+                return;
+            }
+
+            const btn = document.getElementById('analyze-btn');
+            const loading = document.getElementById('loading-indicator');
+            const summaryContent = document.getElementById('summary-content');
+            const solutionContent = document.getElementById('solution-content');
+
+            btn.disabled = true;
+            btn.innerText = "分析中...";
+            loading.style.display = 'block';
+            summaryContent.style.opacity = '0.5';
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ log: logContent })
+                });
+
+                const data = await response.json();
+                renderResults(data);
+
+            } catch (error) {
+                console.error('Error:', error);
+                summaryContent.innerHTML = `<div style="color: var(--error-color)">分析请求失败: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "开始分析";
+                loading.style.display = 'none';
+                summaryContent.style.opacity = '1';
+            }
+        }
+
+        function renderResults(data) {
+            const summaryDiv = document.getElementById('summary-content');
+            const solutionDiv = document.getElementById('solution-content');
+
+            // 1. 渲染总结区域
+            let summaryHtml = `
+                <div class="card">
+                    <h3>基本统计</h3>
+                    <div class="stat-item"><span>日志总行数:</span> <span>${data.line_count}</span></div>
+                    <div class="stat-item"><span>发现错误数:</span> <span class="badge badge-error">${data.error_count}</span></div>
+                    <div class="stat-item"><span>发现警告数:</span> <span class="badge badge-warning" style="background:#5a4b1d;color:#ffdd99">${data.warning_count}</span></div>
+                </div>
+            `;
+
+            if (data.errors && data.errors.length > 0) {
+                summaryHtml += `<div class="card"><h3>🔍 关键错误捕获</h3>`;
+                data.errors.forEach(err => {
+                    summaryHtml += `
+                        <div style="margin-bottom: 15px;">
+                            <div style="font-weight:bold; color: var(--error-color)">${err.type}</div>
+                            <div class="error-log">${err.message}</div>
+                            <div style="font-size: 13px; color: #aaa; margin-top: 5px;">${err.explanation}</div>
+                        </div>
+                    `;
+                });
+                summaryHtml += `</div>`;
+            } else {
+                summaryHtml += `<div class="card" style="border-color: var(--success-color)">
+                    <h3 style="color: var(--success-color)">✅ 未发现严重错误</h3>
+                    <p>日志看起来很健康，没有发现已知的异常模式。</p>
+                </div>`;
+            }
+            summaryDiv.innerHTML = summaryHtml;
+
+            // 2. 渲染解决方案区域
+            let solutionHtml = '';
+            if (data.solutions && data.solutions.length > 0) {
+                data.solutions.forEach(sol => {
+                    solutionHtml += `<div class="card">
+                        <h3>🛠️ 针对: ${sol.error_type}</h3>
+                        <p style="margin-bottom: 10px; color: #ddd;">${sol.suggestion}</p>
+                    `;
+                    
+                    if (sol.steps && sol.steps.length > 0) {
+                        sol.steps.forEach((step, index) => {
+                            solutionHtml += `
+                                <div class="solution-step">
+                                    <div class="step-number">${index + 1}</div>
+                                    <div>${step}</div>
+                                </div>
+                            `;
+                        });
+                    }
+                    solutionHtml += `</div>`;
+                });
+            } else if (data.error_count > 0) {
+                solutionHtml = `<div class="card">
+                    <h3>暂无特定解决方案</h3>
+                    <p>虽然发现了错误，但系统暂时无法提供针对性的修复建议。建议复制错误信息到搜索引擎查询。</p>
+                </div>`;
+            } else {
+                 solutionHtml = `<div style="text-align: center; color: #666; margin-top: 50px;">
+                        无需修复建议
+                    </div>`;
+            }
+            solutionDiv.innerHTML = solutionHtml;
+        }
+    </script>
+</body>
+</html>

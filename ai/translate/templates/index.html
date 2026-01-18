@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>代码翻译工具（原生极简版）</title>
+    <title>代码翻译工具</title>
     <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-java.min.js"></script>
@@ -106,6 +106,8 @@
             border-radius: 8px;
             overflow: hidden;
             position: relative;
+            display: flex;
+            flex-direction: column;
         }
 
         /* 仅移除输入高亮，保留原生textarea样式 */
@@ -136,7 +138,7 @@
             padding: 15px 15px 15px 20px !important; /* 强制左侧缩进5px */
             margin: 0;
             background: #1e1e1e;
-            overflow-y: auto;
+            overflow: auto;
             font-family: "Consolas", "Monaco", "Menlo", monospace;
             font-size: 14px;
             line-height: 1.5;
