@@ -104,10 +104,8 @@
             flex: 1;
             border: 1px solid #444;
             border-radius: 8px;
-            overflow: hidden;
+            overflow: hidden; /* 容器隐藏溢出，由内部元素滚动 */
             position: relative;
-            display: flex;
-            flex-direction: column;
         }
 
         /* 仅移除输入高亮，保留原生textarea样式 */
@@ -132,18 +130,23 @@
             z-index: 2;
         }
 
-        /* 仅修复输出顶格问题 - 核心修改 */
+        /* 修复输出顶格问题并添加滚动条支持 - 模拟textarea行为 */
         #result-code {
-            flex: 1;
-            padding: 15px 15px 15px 20px !important; /* 强制左侧缩进5px */
-            margin: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 15px 15px 15px 20px !important; /* 左侧缩进 */
+            margin: 0 !important;
             background: #1e1e1e;
-            overflow: auto;
             font-family: "Consolas", "Monaco", "Menlo", monospace;
             font-size: 14px;
             line-height: 1.5;
             tab-size: 4;
-            white-space: pre;
+            white-space: pre !important;
+            overflow: auto !important; /* 启用滚动 */
+            color: #f8f8f2;
         }
 
         #translate-btn {
@@ -171,15 +174,15 @@
         }
 
         pre[class*="language-"], code[class*="language-"] {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: transparent !important;
-            white-space: pre !important;
-            font-size: inherit !important;
-            line-height: inherit !important;
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            white-space: pre;
+            font-size: inherit;
+            line-height: inherit;
         }
 
-        /* 滚动条样式完整保留 */
+        /* 滚动条样式 - 应用于所有可滚动的元素 */
         #source-code::-webkit-scrollbar, #result-code::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -287,7 +290,7 @@
         });
     }
     setupCopyButton(copySourceBtn, () => sourceCode.value);
-    setupCopyButton(copyTargetBtn, () => resultCodeBlock.classList.contains('loading') ? '' : resultCodeBlock.textContent);
+    setupCopyButton(copyTargetBtn, () => resultCodeBlock.classList.contains('loading') ? '' : resultCodeBlock.textContent || resultCodeBlock.innerText);
 
     // HTTP请求翻译逻辑100%完整保留
     function translateCode() {
