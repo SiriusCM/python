@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画两圈弹出控制台输入框</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #f5f5f5;
+            padding: 20px;
+            touch-action: none;
+            position: relative;
+        }
+
+        .tip {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .counter {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 30px;
+        }
+
+        .draw-area {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            border: 2px dashed #007bff;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background: white;
+            cursor: crosshair;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 修复：初始完全隐藏控制台 */
+        .input-container {
+            display: none; /* 移除默认flex，确保初始隐藏 */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 9999;
+            padding: 20px;
+        }
+
+        .input-container.show {
+            display: flex; /* 仅show时显示 */
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 控制台主体样式重构 */
+        .console-content {
+            width: 100%;
+            max-width: 600px;
+            height: 80vh;
+            background-color: #1a1a1a;
+            border-radius: 10px;
+            border: 1px solid #333;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 关闭按钮 - 右上角× */
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 30px;
+            height: 30px;
+            background: transparent;
+            border: none;
+            color: #00ffff;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+        }
+
+        .close-btn:hover {
+            color: #ff4444;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        /* 控制台标题 */
+        .console-title {
+            color: #00ffff;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 20px;
+            text-align: center;
+            padding: 15px;
+            border-bottom: 1px solid #333;
+            margin-right: 45px; /* 给关闭按钮留空间 */
+        }
+
+        /* 历史记录区域 */
+        .history-area {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            color: #00ffaa;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 16px;
+        }
+
+        .history-item {
+            padding: 8px 5px;
+            margin-bottom: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .history-item:hover {
+            background-color: #2a2a2a;
+        }
+
+        .history-item::before {
+            content: "> ";
+            color: #00ffff;
+        }
+
+        /* 输入区域 - 底部 */
+        .input-wrapper {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid #333;
+            gap: 10px;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #00ffff;
+            border-radius: 5px;
+            font-size: 16px;
+            background-color: #222;
+            color: #00ffff;
+            font-family: 'Consolas', 'Monaco', monospace;
+            outline: none;
+        }
+
+        #user-input::placeholder {
+            color: #666;
+        }
+
+        /* 回车图标按钮 */
+        .enter-btn {
+            width: 40px;
+            height: 40px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            padding: 0;
+            margin: 0;
+        }
+
+        .enter-btn:hover {
+            background-color: #0056b3;
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+<div class="tip">请在下方区域用鼠标/手指画两圈</div>
+<div class="counter">已完成转圈次数: <span id="circle-count">0</span></div>
+<div class="draw-area" id="draw-area"></div>
+
+<!-- 重构后的控制台 -->
+<div class="input-container" id="input-box">
+    <div class="console-content">
+        <!-- 关闭按钮 -->
+        <button class="close-btn" onclick="resetCounter()">×</button>
+        <!-- 标题 -->
+        <div class="console-title">游戏控制台</div>
+        <!-- 历史记录区域 -->
+        <div class="history-area" id="history-area">
+            <div class="history-item" style="color:#666">// 点击历史指令可复制到输入框</div>
+        </div>
+        <!-- 输入区域 -->
+        <div class="input-wrapper">
+            <input type="text" id="user-input" placeholder="输入控制台指令...">
+            <button class="enter-btn" onclick="submitInput()">↵</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let circleCount = 0;
+    let isDrawing = false;
+    let startPoint = null;
+    let lastAngle = 0;
+    let totalAngle = 0;
+    let minRadius = 20;
+    // 新增：历史记录数组
+    let commandHistory = [];
+
+    const countElement = document.getElementById('circle-count');
+    const inputBox = document.getElementById('input-box');
+    const drawArea = document.getElementById('draw-area');
+    const historyArea = document.getElementById('history-area');
+    const userInput = document.getElementById('user-input');
+
+    // 绑定绘制事件
+    drawArea.addEventListener('mousedown', startDraw);
+    drawArea.addEventListener('touchstart', handleTouchStart);
+    drawArea.addEventListener('mousemove', draw);
+    drawArea.addEventListener('touchmove', handleTouchMove);
+    drawArea.addEventListener('mouseup', endDraw);
+    drawArea.addEventListener('mouseleave', endDraw);
+    drawArea.addEventListener('touchend', endDraw);
+
+    // 输入框回车触发执行
+    userInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            submitInput();
+        }
+    });
+
+    // 触屏适配
+    function handleTouchStart(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const rect = drawArea.getBoundingClientRect();
+        startDraw({
+            clientX: touch.clientX - rect.left,
+            clientY: touch.clientY - rect.top
+        });
+    }
+
+    function handleTouchMove(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const rect = drawArea.getBoundingClientRect();
+        draw({
+            clientX: touch.clientX - rect.left,
+            clientY: touch.clientY - rect.top
+        });
+    }
+
+    // 绘制逻辑
+    function startDraw(e) {
+        isDrawing = true;
+        startPoint = {x: e.clientX, y: e.clientY};
+        lastAngle = getAngle(startPoint.x, startPoint.y, e.clientX, e.clientY);
+        totalAngle = 0;
+    }
+
+    function draw(e) {
+        if (!isDrawing || !startPoint) return;
+
+        const currentAngle = getAngle(startPoint.x, startPoint.y, e.clientX, e.clientY);
+        let angleDiff = currentAngle - lastAngle;
+
+        if (angleDiff > 180) angleDiff -= 360;
+        if (angleDiff < -180) angleDiff += 360;
+
+        totalAngle += Math.abs(angleDiff);
+        lastAngle = currentAngle;
+
+        const radius = getDistance(startPoint.x, startPoint.y, e.clientX, e.clientY);
+
+        if (totalAngle >= 360 && radius >= minRadius) {
+            circleCount++;
+            countElement.textContent = circleCount;
+            totalAngle = 0;
+
+            if (circleCount >= 2) {
+                inputBox.classList.add('show');
+                userInput.focus();
+            }
+        }
+    }
+
+    function endDraw() {
+        isDrawing = false;
+        startPoint = null;
+        lastAngle = 0;
+        totalAngle = 0;
+    }
+
+    // 工具函数
+    function getAngle(x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        if (angle < 0) angle += 360;
+        return angle;
+    }
+
+    function getDistance(x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // 提交指令（新增历史记录）
+    function submitInput() {
+        const inputValue = userInput.value.trim();
+        if (!inputValue) return;
+
+        // 添加到历史记录
+        commandHistory.push(inputValue);
+        updateHistoryArea();
+
+        // 模拟指令执行
+        alert(`控制台执行指令：${inputValue}`);
+
+        // 清空输入框并聚焦
+        userInput.value = '';
+        userInput.focus();
+    }
+
+    // 更新历史记录区域
+    function updateHistoryArea() {
+        // 清空原有内容（保留提示）
+        historyArea.innerHTML = '';
+
+        // 添加提示
+        const tipItem = document.createElement('div');
+        tipItem.className = 'history-item';
+        tipItem.style.color = '#666';
+        tipItem.textContent = '// 点击历史指令可复制到输入框';
+        historyArea.appendChild(tipItem);
+
+        // 倒序显示历史记录（最新的在最上面）
+        commandHistory.slice().reverse().forEach(cmd => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.textContent = cmd;
+            // 点击复制到输入框
+            item.addEventListener('click', function () {
+                userInput.value = cmd;
+                userInput.focus();
+            });
+            historyArea.appendChild(item);
+        });
+    }
+
+    // 修复：关闭控制台（重置计数+隐藏）
+    function resetCounter() {
+        circleCount = 0;
+        countElement.textContent = circleCount;
+        inputBox.classList.remove('show');
+        userInput.value = ''; // 清空输入框
+    }
+</script>
+</body>
+</html>
