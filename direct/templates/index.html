@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Twitter Clone</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
+    <link rel="stylesheet" href="/static/css/index.css">
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <header class="header" id="header" style="display: none;">
+        <span class="back-btn" onclick="goBack()" style="display: none;" id="backBtn">
+            <i class="ri-arrow-left-line"></i>
+        </span>
+        <h1 id="headerTitle">首页</h1>
+    </header>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 首页（Feed） -->
+        <div class="page active" id="feedPage">
+            <div id="feedList"></div>
+            <div class="load-more" id="feedLoadMore" onclick="loadMoreFeed()">加载更多</div>
+        </div>
+
+        <!-- 用户资料页 -->
+        <div class="page" id="profilePage">
+            <div class="profile-header">
+                <div class="profile-banner"></div>
+                <div class="profile-info">
+                    <div class="profile-avatar">
+                        <img id="profileAvatar" src="/static/default-avatar.png" alt="头像">
+                    </div>
+                    <div class="profile-name" id="profileName"></div>
+                    <div class="profile-username" id="profileUsername"></div>
+                    <div class="profile-bio" id="profileBio"></div>
+                    <div class="profile-stats">
+                        <span onclick="showFollowing()"><strong id="profileFollowingCount">0</strong> <span class="count-label">关注</span></span>
+                        <span onclick="showFollowers()"><strong id="profileFollowerCount">0</strong> <span class="count-label">粉丝</span></span>
+                        <span><strong id="profilePostCount">0</strong> <span class="count-label">帖子</span></span>
+                    </div>
+                    <div class="profile-actions" id="profileActions"></div>
+                </div>
+            </div>
+            <div id="profilePosts"></div>
+        </div>
+
+        <!-- 编辑资料页 -->
+        <div class="page" id="editProfilePage">
+            <div class="edit-profile-page">
+                <div class="edit-avatar">
+                    <img id="editAvatar" src="/static/default-avatar.png" alt="头像">
+                    <div>
+                        <label for="avatarInput">更换头像</label>
+                        <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>昵称</label>
+                    <input type="text" id="editNickname" placeholder="请输入昵称">
+                </div>
+                <div class="form-group">
+                    <label>个人简介</label>
+                    <input type="text" id="editBio" placeholder="介绍一下自己">
+                </div>
+                <button class="btn" onclick="saveProfile()">保存</button>
+            </div>
+        </div>
+
+        <!-- 关注列表页 -->
+        <div class="page" id="followingPage">
+            <div class="user-list" id="followingList"></div>
+        </div>
+
+        <!-- 粉丝列表页 -->
+        <div class="page" id="followersPage">
+            <div class="user-list" id="followersList"></div>
+        </div>
+
+        <!-- 搜索页 -->
+        <div class="page" id="searchPage">
+            <div class="search-page">
+                <div class="search-input-wrapper">
+                    <i class="ri-search-line"></i>
+                    <input type="text" id="searchInput" placeholder="搜索用户" oninput="searchUsers()">
+                </div>
+                <div class="suggestions-section">
+                    <h3>推荐关注</h3>
+                    <div id="suggestionsList"></div>
+                </div>
+                <div id="searchResults"></div>
+            </div>
+        </div>
+
+        <!-- 个人中心页 -->
+        <div class="page" id="mePage">
+            <div class="profile-header">
+                <div class="profile-banner"></div>
+                <div class="profile-info">
+                    <div class="profile-avatar">
+                        <img id="myAvatar" src="/static/default-avatar.png" alt="头像">
+                    </div>
+                    <div class="profile-name" id="myName"></div>
+                    <div class="profile-username" id="myUsername"></div>
+                    <div class="profile-bio" id="myBio"></div>
+                    <div class="profile-stats">
+                        <span onclick="showMyFollowing()"><strong id="myFollowingCount">0</strong> <span class="count-label">关注</span></span>
+                        <span onclick="showMyFollowers()"><strong id="myFollowerCount">0</strong> <span class="count-label">粉丝</span></span>
+                        <span><strong id="myPostCount">0</strong> <span class="count-label">帖子</span></span>
+                    </div>
+                    <div class="profile-actions">
+                        <button class="btn btn-outline" onclick="showPage('editProfilePage')">编辑资料</button>
+                        <button class="btn btn-danger" onclick="logout()">退出登录</button>
+                    </div>
+                </div>
+            </div>
+            <div id="myPosts"></div>
+        </div>
+    </div>
+
+    <!-- 底部导航 -->
+    <nav class="tabbar" id="tabbar" style="display: none;">
+        <div class="tabbar-item active" onclick="showPage('feedPage')" data-page="feedPage">
+            <i class="ri-home-5-line"></i>
+            <span>首页</span>
+        </div>
+        <div class="tabbar-item" onclick="showPage('searchPage')" data-page="searchPage">
+            <i class="ri-search-line"></i>
+            <span>发现</span>
+        </div>
+        <div class="tabbar-item" onclick="showPage('mePage')" data-page="mePage">
+            <i class="ri-user-line"></i>
+            <span>我的</span>
+        </div>
+    </nav>
+
+    <!-- 发帖按钮 -->
+    <div class="fab" id="fab" style="display: none;" onclick="openPostModal()">
+        <i class="ri-edit-line"></i>
+    </div>
+
+    <!-- 发帖弹窗 -->
+    <div class="modal" id="postModal" onclick="closePostModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <span class="close-btn" onclick="closePostModal()">
+                    <i class="ri-close-line"></i>
+                </span>
+                <button class="btn" style="width: auto; padding: 8px 20px;" onclick="submitPost()">发布</button>
+            </div>
+            <textarea class="post-textarea" id="postContent" placeholder="有什么新鲜事想分享给大家？" maxlength="500"></textarea>
+            <div class="post-char-count"><span id="charCount">0</span>/500</div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="/static/js/index.js"></script>
+</body>
+</html>
