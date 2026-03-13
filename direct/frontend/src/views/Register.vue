@@ -27,7 +27,7 @@
         {{ loading ? '注册中...' : '注册' }}
       </button>
       <p class="switch-auth">
-        已有账号？<a href="#/login">立即登录</a>
+        已有账号？<router-link to="/login">立即登录</router-link>
       </p>
     </div>
     <div class="toast" :class="{ show: showToast }">{{ toastMessage }}</div>

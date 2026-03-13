@@ -1,12 +1,24 @@
-from fastapi import FastAPI, Request, Depends
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, Depends, HTTPException, status, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from passlib.context import CryptContext
+import jwt
+import os
+from datetime import datetime, timedelta
+from typing import Optional
 
 from database import get_db
 from models import User, Post, Follow, Like
 from schemas import RegisterRequest, LoginRequest, ProfileUpdate, PostCreate
+
+# 上传目录
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# JWT 配置
+SECRET_KEY = "your-secret-key-change-in-production"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7天
 
 # 密码加密
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -22,21 +34,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+# 创建 JWT token
+def create_access_token(user_id: int):
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode = {"user_id": user_id, "exp": expire}
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# 页面路由
-@app.get("/")
-def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+# 从 Authorization header 提取 token
+def get_token_from_request(request: Request = None):
+    if not request:
+        return None
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        return auth_header[7:]
+    return None
 
-@app.get("/login")
-def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+# 验证 JWT token
+def get_current_user(token: str = None, db=None):
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+        if user_id is None:
+            return None
+    except jwt.PyJWTError:
+        return None
 
-@app.get("/register")
-def register_page(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request})
+    user = db.query(User).filter(User.id == user_id).first()
+    return user
+
+# 依赖：获取当前用户
+def get_current_user_from_request(request: Request = None, db=Depends(get_db)):
+    token = get_token_from_request(request)
+    return get_current_user(token, db)
 
 # 注册
 @app.post("/api/register")
@@ -60,7 +91,7 @@ def register(data: RegisterRequest, db=Depends(get_db)):
 
 # 登录
 @app.post("/api/login")
-def login(data: LoginRequest, request: Request, db=Depends(get_db)):
+def login(data: LoginRequest, db=Depends(get_db)):
     user = db.query(User).filter(
         (User.username == data.username) | (User.email == data.username)
     ).first()
@@ -68,51 +99,39 @@ def login(data: LoginRequest, request: Request, db=Depends(get_db)):
     if not user or not pwd_context.verify(data.password, user.password):
         return {"success": False, "message": "用户名或密码错误"}
 
-    request.session["user_id"] = user.id
-    request.session["username"] = user.username
+    token = create_access_token(user.id)
 
-    return {"success": True, "message": "登录成功", "user": user.to_dict()}
+    return {"success": True, "message": "登录成功", "user": user.to_dict(), "token": token}
 
 # 登出
 @app.post("/api/logout")
-def logout(request: Request):
-    request.session.clear()
+def logout():
     return {"success": True, "message": "已退出登录"}
 
 # 当前用户
 @app.post("/api/me")
-def get_me(db=Depends(get_db), request: Request = None):
-    user_id = request.session.get("user_id") if request else None
-    if not user_id:
+def get_me(current_user: User = Depends(get_current_user_from_request)):
+    if not current_user:
         return {"success": False, "message": "未登录"}
 
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        return {"success": False, "message": "用户不存在"}
-
-    return {"success": True, "user": user.to_dict()}
+    return {"success": True, "user": current_user.to_dict()}
 
 # 修改资料
 @app.post("/api/profile")
-def update_profile(data: ProfileUpdate, db=Depends(get_db), request: Request = None):
-    user_id = request.session.get("user_id") if request else None
-    if not user_id:
+def update_profile(data: ProfileUpdate, current_user: User = Depends(get_current_user_from_request), db=Depends(get_db)):
+    if not current_user:
         return {"success": False, "message": "未登录"}
 
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        return {"success": False, "message": "用户不存在"}
-
     if data.nickname is not None:
-        user.nickname = data.nickname
+        current_user.nickname = data.nickname
     if data.bio is not None:
-        user.bio = data.bio
+        current_user.bio = data.bio
     if data.avatar is not None:
-        user.avatar = data.avatar
+        current_user.avatar = data.avatar
 
     db.commit()
 
-    return {"success": True, "message": "更新成功", "user": user.to_dict()}
+    return {"success": True, "message": "更新成功", "user": current_user.to_dict()}
 
 # 获取用户信息
 @app.post("/api/users/{user_id}")
@@ -121,11 +140,12 @@ def get_user(user_id: int, db=Depends(get_db), request: Request = None):
     if not user:
         return {"success": False, "message": "用户不存在"}
 
-    current_user_id = request.session.get("user_id") if request else None
+    token = get_token_from_request(request)
+    current_user = get_current_user(token, db)
     is_following = False
-    if current_user_id:
+    if current_user:
         is_following = db.query(Follow).filter_by(
-            follower_id=current_user_id,
+            follower_id=current_user.id,
             following_id=user_id
         ).first() is not None
 
@@ -140,19 +160,28 @@ def get_user(user_id: int, db=Depends(get_db), request: Request = None):
 
 # 获取用户帖子
 @app.post("/api/users/{user_id}/posts")
-def get_user_posts(user_id: int, db=Depends(get_db)):
+def get_user_posts(user_id: int, db=Depends(get_db), request: Request = None):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         return {"success": False, "message": "用户不存在"}
 
     posts = db.query(Post).filter(Post.user_id == user_id).order_by(Post.created_at.desc()).all()
 
-    return {"success": True, "posts": [post.to_dict() for post in posts]}
+    # 获取当前用户点赞的帖子
+    liked_post_ids = set()
+    token = get_token_from_request(request)
+    current_user = get_current_user(token, db)
+    if current_user:
+        liked_post_ids = {like.post_id for like in db.query(Like).filter(Like.user_id == current_user.id).all()}
+
+    return {"success": True, "posts": [post.to_dict(is_liked=post.id in liked_post_ids) for post in posts]}
 
 # 推荐首页
 @app.post("/api/feed")
 def get_feed(db=Depends(get_db), request: Request = None):
-    user_id = request.session.get("user_id") if request else None
+    token = get_token_from_request(request)
+    current_user = get_current_user(token, db)
+    user_id = current_user.id if current_user else None
 
     if user_id:
         following_ids = [f.following_id for f in db.query(Follow).filter(Follow.follower_id == user_id).all()]
@@ -161,13 +190,17 @@ def get_feed(db=Depends(get_db), request: Request = None):
     else:
         posts = db.query(Post).order_by(Post.created_at.desc()).limit(20).all()
 
-    return {"success": True, "posts": [post.to_dict() for post in posts]}
+    # 获取当前用户点赞的帖子
+    liked_post_ids = set()
+    if current_user:
+        liked_post_ids = {like.post_id for like in db.query(Like).filter(Like.user_id == current_user.id).all()}
+
+    return {"success": True, "posts": [post.to_dict(is_liked=post.id in liked_post_ids) for post in posts]}
 
 # 发帖
 @app.post("/api/posts")
-def create_post(data: PostCreate, db=Depends(get_db), request: Request = None):
-    user_id = request.session.get("user_id") if request else None
-    if not user_id:
+def create_post(data: PostCreate, current_user: User = Depends(get_current_user_from_request), db=Depends(get_db)):
+    if not current_user:
         return {"success": False, "message": "请先登录"}
 
     content = data.content.strip() if data.content else ""
@@ -177,7 +210,7 @@ def create_post(data: PostCreate, db=Depends(get_db), request: Request = None):
     if len(content) > 500:
         return {"success": False, "message": "内容不能超过500字"}
 
-    post = Post(user_id=user_id, content=content)
+    post = Post(user_id=current_user.id, content=content)
     db.add(post)
     db.commit()
     db.refresh(post)
@@ -186,16 +219,15 @@ def create_post(data: PostCreate, db=Depends(get_db), request: Request = None):
 
 # 删除帖子
 @app.post("/api/posts/{post_id}/delete")
-def delete_post(post_id: int, db=Depends(get_db), request: Request = None):
-    user_id = request.session.get("user_id") if request else None
-    if not user_id:
+def delete_post(post_id: int, current_user: User = Depends(get_current_user_from_request), db=Depends(get_db)):
+    if not current_user:
         return {"success": False, "message": "请先登录"}
 
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         return {"success": False, "message": "帖子不存在"}
 
-    if post.user_id != user_id:
+    if post.user_id != current_user.id:
         return {"success": False, "message": "无权删除"}
 
     db.delete(post)
@@ -205,26 +237,25 @@ def delete_post(post_id: int, db=Depends(get_db), request: Request = None):
 
 # 关注
 @app.post("/api/follow/{user_id}")
-def follow_user(user_id: int, db=Depends(get_db), request: Request = None):
-    current_user_id = request.session.get("user_id") if request else None
-    if not current_user_id:
+def follow_user(user_id: int, current_user: User = Depends(get_current_user_from_request), db=Depends(get_db)):
+    if not current_user:
         return {"success": False, "message": "请先登录"}
 
-    if current_user_id == user_id:
+    if current_user.id == user_id:
         return {"success": False, "message": "不能关注自己"}
 
     if not db.query(User).filter(User.id == user_id).first():
         return {"success": False, "message": "用户不存在"}
 
     existing = db.query(Follow).filter_by(
-        follower_id=current_user_id,
+        follower_id=current_user.id,
         following_id=user_id
     ).first()
 
     if existing:
         return {"success": False, "message": "已经关注了"}
 
-    follow = Follow(follower_id=current_user_id, following_id=user_id)
+    follow = Follow(follower_id=current_user.id, following_id=user_id)
     db.add(follow)
     db.commit()
 
@@ -232,13 +263,12 @@ def follow_user(user_id: int, db=Depends(get_db), request: Request = None):
 
 # 取消关注
 @app.post("/api/follow/{user_id}/unfollow")
-def unfollow_user(user_id: int, db=Depends(get_db), request: Request = None):
-    current_user_id = request.session.get("user_id") if request else None
-    if not current_user_id:
+def unfollow_user(user_id: int, current_user: User = Depends(get_current_user_from_request), db=Depends(get_db)):
+    if not current_user:
         return {"success": False, "message": "请先登录"}
 
     follow = db.query(Follow).filter_by(
-        follower_id=current_user_id,
+        follower_id=current_user.id,
         following_id=user_id
     ).first()
 
@@ -272,39 +302,22 @@ def get_followers(user_id: int, db=Depends(get_db)):
 
 # 点赞
 @app.post("/api/posts/{post_id}/like")
-def like_post(post_id: int, db=Depends(get_db), request: Request = None):
-    user_id = request.session.get("user_id") if request else None
-    if not user_id:
+def like_post(post_id: int, current_user: User = Depends(get_current_user_from_request), db=Depends(get_db)):
+    if not current_user:
         return {"success": False, "message": "请先登录"}
 
     if not db.query(Post).filter(Post.id == post_id).first():
         return {"success": False, "message": "帖子不存在"}
 
-    existing = db.query(Like).filter_by(user_id=user_id, post_id=post_id).first()
+    existing = db.query(Like).filter_by(user_id=current_user.id, post_id=post_id).first()
     if existing:
         return {"success": False, "message": "已经点赞过了"}
 
-    like = Like(user_id=user_id, post_id=post_id)
+    like = Like(user_id=current_user.id, post_id=post_id)
     db.add(like)
     db.commit()
 
     return {"success": True, "message": "点赞成功"}
-
-# 取消点赞
-@app.post("/api/posts/{post_id}/unlike")
-def unlike_post(post_id: int, db=Depends(get_db), request: Request = None):
-    user_id = request.session.get("user_id") if request else None
-    if not user_id:
-        return {"success": False, "message": "请先登录"}
-
-    like = db.query(Like).filter_by(user_id=user_id, post_id=post_id).first()
-    if not like:
-        return {"success": False, "message": "尚未点赞"}
-
-    db.delete(like)
-    db.commit()
-
-    return {"success": True, "message": "取消点赞成功"}
 
 # 搜索
 @app.post("/api/search")
@@ -322,12 +335,13 @@ def search_users(keyword: str = "", db=Depends(get_db)):
 # 推荐
 @app.post("/api/suggestions")
 def get_suggestions(db=Depends(get_db), request: Request = None):
-    user_id = request.session.get("user_id") if request else None
+    token = get_token_from_request(request)
+    current_user = get_current_user(token, db)
 
     query = db.query(User)
-    if user_id:
-        following_ids = [f.following_id for f in db.query(Follow).filter(Follow.follower_id == user_id).all()]
-        following_ids.append(user_id)
+    if current_user:
+        following_ids = [f.following_id for f in db.query(Follow).filter(Follow.follower_id == current_user.id).all()]
+        following_ids.append(current_user.id)
         query = query.filter(~User.id.in_(following_ids))
 
     users = query.order_by(User.created_at.desc()).limit(10).all()

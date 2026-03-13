@@ -44,16 +44,20 @@ class Post(Base):
     author = relationship("User", back_populates="posts")
     likes = relationship("Like", back_populates="post")
 
-    def to_dict(self):
-        return {
+    def to_dict(self, include_author=True, is_liked=False):
+        data = {
             "id": self.id,
             "user_id": self.user_id,
             "content": self.content,
             "image": self.image,
-            "author": self.author.to_dict(),
             "created_at": self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None,
-            "like_count": len(self.likes) if self.likes else 0
+            "likes_count": len(self.likes) if self.likes else 0,
+            "comments_count": 0,
+            "is_liked": is_liked
         }
+        if include_author and self.author:
+            data["user"] = self.author.to_dict()
+        return data
 
 class Follow(Base):
     __tablename__ = "follows"

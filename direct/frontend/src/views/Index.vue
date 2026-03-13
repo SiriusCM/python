@@ -31,8 +31,8 @@
                 <i class="ri-chat-1-line"></i>
                 {{ post.comments_count || 0 }}
               </button>
-              <button class="post-action">
-                <i class="ri-share-forward-line"></i>
+              <button class="post-action" @click="deletePost(post)" v-if="post.user_id === currentUser?.id">
+                <i class="ri-delete-bin-line"></i>
               </button>
             </div>
           </div>
@@ -240,7 +240,7 @@
     </div>
 
     <!-- 底部导航 -->
-    <nav class="tabbar" v-if="currentUser">
+    <nav class="tabbar">
       <button class="tabbar-item" :class="{ active: currentPage === 'feed' }" @click="switchPage('feed')">
         <i class="ri-home-5-line"></i>
         <span>首页</span>
@@ -274,16 +274,52 @@
       </div>
     </div>
 
+    <!-- 搜索弹窗 -->
+    <div class="modal" :class="{ active: showSearchModal }" @click="showSearchModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <span class="close-btn" @click="showSearchModal = false">
+            <i class="ri-close-line"></i>
+          </span>
+          <h3>搜索</h3>
+        </div>
+        <div class="search-input-wrapper">
+          <i class="ri-search-line"></i>
+          <input type="text" v-model="searchKeyword" placeholder="搜索内容或用户" @input="searchUsers">
+        </div>
+        <div v-if="searchResults.length > 0" class="search-results">
+          <div v-for="user in searchResults" :key="user.id" class="user-item" @click="viewProfile(user.id); showSearchModal = false">
+            <div class="user-item-avatar">
+              <img :src="user.avatar || defaultAvatar" alt="头像">
+            </div>
+            <div>
+              <div class="user-item-name">{{ user.nickname || user.username }}</div>
+              <div class="user-item-username">@{{ user.username }}</div>
+            </div>
+          </div>
+        </div>
+        <div v-else-if="searchKeyword && searchResults.length === 0" class="empty-state">
+          <p>未找到相关用户</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast -->
     <div class="toast" :class="{ show: showToast }">{{ toastMessage }}</div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
 const defaultAvatar = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23667eea"/></svg>'
+
+// 获取认证头
+const getAuthHeader = () => {
+  const token = localStorage.getItem('token')
+  return token ? { 'Authorization': `Bearer ${token}` } : {}
+}
 
 // 状态
 const currentUser = ref(null)
@@ -302,6 +338,9 @@ const suggestions = ref([])
 const showPostModal = ref(false)
 const postContent = ref('')
 const charCount = ref(0)
+
+// 搜索
+const showSearchModal = ref(false)
 
 // 用户资料
 const profileUser = ref(null)
@@ -324,11 +363,11 @@ const followersList = ref([])
 const showToast = ref(false)
 const toastMessage = ref('')
 
-// 计算属性
+// 帖子
 const feedPosts = ref([])
 const pageHistory = ref([])
 
-// 方法
+// Toast
 const showToastMessage = (msg) => {
   toastMessage.value = msg
   showToast.value = true
@@ -392,15 +431,19 @@ const goBack = () => {
   }
 }
 
+const goToCreatePost = () => {
+  router.push('/create')
+}
+
 const viewProfile = async (userId) => {
   try {
     const user = JSON.parse(localStorage.getItem('user') || '{}')
     isMyProfile.value = user.id === userId
 
-    const response = await axios.get(`/api/users/${userId}`)
+    const response = await axios.post(`/api/users/${userId}`, {}, { headers: getAuthHeader() })
     profileUser.value = response.data.user
 
-    const postsResponse = await axios.get(`/api/users/${userId}/posts`)
+    const postsResponse = await axios.post(`/api/users/${userId}/posts`, {}, { headers: getAuthHeader() })
     userPosts.value = postsResponse.data.posts || []
 
     switchPage('profile')
@@ -411,7 +454,7 @@ const viewProfile = async (userId) => {
 
 const loadFeed = async () => {
   try {
-    const response = await axios.get(`/api/feed?page=${feedPage.value}`)
+    const response = await axios.post('/api/feed', {}, { params: { page: feedPage.value }, headers: getAuthHeader() })
     if (feedPage.value === 1) {
       feedPosts.value = response.data.posts || []
     } else {
@@ -430,7 +473,7 @@ const loadMoreFeed = () => {
 
 const loadSuggestions = async () => {
   try {
-    const response = await axios.get('/api/suggestions')
+    const response = await axios.post('/api/suggestions', {}, { headers: getAuthHeader() })
     suggestions.value = response.data.users || []
   } catch (error) {
     console.error('加载推荐失败:', error)
@@ -444,7 +487,7 @@ const searchUsers = async () => {
   }
 
   try {
-    const response = await axios.get(`/api/search?keyword=${searchKeyword.value}`)
+    const response = await axios.post('/api/search', { keyword: searchKeyword.value }, { headers: getAuthHeader() })
     searchResults.value = response.data.users || []
   } catch (error) {
     console.error('搜索失败:', error)
@@ -454,21 +497,26 @@ const searchUsers = async () => {
 const loadMyProfile = async () => {
   try {
     const userData = JSON.parse(localStorage.getItem('user') || '{}')
+    if (!userData || !userData.id) {
+      logout()
+      return
+    }
     currentUser.value = userData
 
-    const response = await axios.get(`/api/users/${userData.id}`)
+    const response = await axios.post(`/api/users/${userData.id}`, {}, { headers: getAuthHeader() })
     currentUser.value = response.data.user
 
-    const postsResponse = await axios.get(`/api/users/${userData.id}/posts`)
+    const postsResponse = await axios.post(`/api/users/${userData.id}/posts`, {}, { headers: getAuthHeader() })
     myPosts.value = postsResponse.data.posts || []
   } catch (error) {
     console.error('加载失败:', error)
+    logout()
   }
 }
 
 const followUser = async (user) => {
   try {
-    await axios.post('/api/follow', { user_id: user.id })
+    await axios.post(`/api/follow/${user.id}`, {}, { headers: getAuthHeader() })
     user.is_following = true
     user.follower_count = (user.follower_count || 0) + 1
     showToastMessage('关注成功')
@@ -479,7 +527,7 @@ const followUser = async (user) => {
 
 const unfollowUser = async (user) => {
   try {
-    await axios.post('/api/unfollow', { user_id: user.id })
+    await axios.post(`/api/follow/${user.id}/unfollow`, {}, { headers: getAuthHeader() })
     user.is_following = false
     user.follower_count = Math.max(0, (user.follower_count || 1) - 1)
     showToastMessage('已取消关注')
@@ -491,7 +539,7 @@ const unfollowUser = async (user) => {
 const showFollowingList = async () => {
   if (!profileUser.value) return
   try {
-    const response = await axios.get(`/api/users/${profileUser.value.id}/following`)
+    const response = await axios.post(`/api/users/${profileUser.value.id}/following`, {}, { headers: getAuthHeader() })
     followingList.value = response.data.users || []
     switchPage('following')
   } catch (error) {
@@ -502,7 +550,7 @@ const showFollowingList = async () => {
 const showFollowersList = async () => {
   if (!profileUser.value) return
   try {
-    const response = await axios.get(`/api/users/${profileUser.value.id}/followers`)
+    const response = await axios.post(`/api/users/${profileUser.value.id}/followers`, {}, { headers: getAuthHeader() })
     followersList.value = response.data.users || []
     switchPage('followers')
   } catch (error) {
@@ -513,7 +561,7 @@ const showFollowersList = async () => {
 const showMyFollowingList = async () => {
   if (!currentUser.value) return
   try {
-    const response = await axios.get(`/api/users/${currentUser.value.id}/following`)
+    const response = await axios.post(`/api/users/${currentUser.value.id}/following`, {}, { headers: getAuthHeader() })
     followingList.value = response.data.users || []
     switchPage('following')
   } catch (error) {
@@ -524,7 +572,7 @@ const showMyFollowingList = async () => {
 const showMyFollowersList = async () => {
   if (!currentUser.value) return
   try {
-    const response = await axios.get(`/api/users/${currentUser.value.id}/followers`)
+    const response = await axios.post(`/api/users/${currentUser.value.id}/followers`, {}, { headers: getAuthHeader() })
     followersList.value = response.data.users || []
     switchPage('followers')
   } catch (error) {
@@ -534,17 +582,22 @@ const showMyFollowersList = async () => {
 
 const toggleLike = async (post) => {
   try {
-    if (post.is_liked) {
-      await axios.post('/api/unlike', { post_id: post.id })
-      post.is_liked = false
-      post.likes_count = Math.max(0, (post.likes_count || 1) - 1)
-    } else {
-      await axios.post('/api/like', { post_id: post.id })
-      post.is_liked = true
-      post.likes_count = (post.likes_count || 0) + 1
-    }
+    await axios.post(`/api/posts/${post.id}/like`, {}, { headers: getAuthHeader() })
+    post.is_liked = !post.is_liked
+    post.likes_count = post.is_liked ? (post.likes_count || 0) + 1 : Math.max(0, (post.likes_count || 1) - 1)
   } catch (error) {
     showToastMessage('操作失败')
+  }
+}
+
+const deletePost = async (post) => {
+  if (!confirm('确定删除这条帖子？')) return
+  try {
+    await axios.post(`/api/posts/${post.id}/delete`, {}, { headers: getAuthHeader() })
+    showToastMessage('删除成功')
+    loadFeed()
+  } catch (error) {
+    showToastMessage(error.response?.data?.message || '删除失败')
   }
 }
 
@@ -563,7 +616,7 @@ const submitPost = async () => {
   }
 
   try {
-    await axios.post('/api/posts', { content: postContent.value })
+    await axios.post('/api/posts', { content: postContent.value }, { headers: getAuthHeader() })
     showToastMessage('发布成功')
     showPostModal.value = false
     postContent.value = ''
@@ -603,7 +656,7 @@ const saveProfile = async () => {
       nickname: editForm.value.nickname,
       bio: editForm.value.bio,
       avatar: editForm.value.avatar
-    })
+    }, { headers: getAuthHeader() })
 
     currentUser.value = { ...currentUser.value, ...response.data.user }
     localStorage.setItem('user', JSON.stringify(currentUser.value))
@@ -618,19 +671,20 @@ const saveProfile = async () => {
 const logout = () => {
   localStorage.removeItem('user')
   localStorage.removeItem('token')
-  window.location.href = '#/login'
+  window.location.href = window.location.origin + '/#/login'
   window.location.reload()
 }
 
-// 初始化
 onMounted(() => {
   const user = localStorage.getItem('user')
+  console.log('Index mounted, user from localStorage:', user)
   if (!user) {
-    window.location.href = '#/login'
+    window.location.href = window.location.origin + '/#/login'
     return
   }
 
   currentUser.value = JSON.parse(user)
+  console.log('currentUser set to:', currentUser.value)
   loadFeed()
 })
 </script>
