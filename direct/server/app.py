@@ -1,73 +1,27 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Request, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, status, Request, UploadFile, File, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from passlib.context import CryptContext
-import jwt
 import os
-from datetime import datetime, timedelta
-from typing import Optional
 
 from database import get_db
 from models import User, Post, Follow, Like
 from schemas import RegisterRequest, LoginRequest, ProfileUpdate, PostCreate
+from auth import create_access_token, get_token_from_request, get_current_user, get_current_user_from_request, get_password_hash, verify_password
 
 # 上传目录
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-# JWT 配置
-SECRET_KEY = "your-secret-key-change-in-production"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7天
-
-# 密码加密
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # FastAPI应用
 app = FastAPI(title="Twitter Clone API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# 创建 JWT token
-def create_access_token(user_id: int):
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode = {"user_id": user_id, "exp": expire}
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-# 从 Authorization header 提取 token
-def get_token_from_request(request: Request = None):
-    if not request:
-        return None
-    auth_header = request.headers.get('Authorization')
-    if auth_header and auth_header.startswith('Bearer '):
-        return auth_header[7:]
-    return None
-
-# 验证 JWT token
-def get_current_user(token: str = None, db=None):
-    if not token:
-        return None
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("user_id")
-        if user_id is None:
-            return None
-    except jwt.PyJWTError:
-        return None
-
-    user = db.query(User).filter(User.id == user_id).first()
-    return user
-
-# 依赖：获取当前用户
-def get_current_user_from_request(request: Request = None, db=Depends(get_db)):
-    token = get_token_from_request(request)
-    return get_current_user(token, db)
 
 # 注册
 @app.post("/api/register")
@@ -80,7 +34,7 @@ def register(data: RegisterRequest, db=Depends(get_db)):
     user = User(
         username=data.username,
         email=data.email,
-        password=pwd_context.hash(data.password),
+        password=get_password_hash(data.password),
         nickname=data.nickname or data.username
     )
     db.add(user)
@@ -90,22 +44,32 @@ def register(data: RegisterRequest, db=Depends(get_db)):
     return {"success": True, "message": "注册成功", "user": user.to_dict()}
 
 # 登录
-@app.post("/api/login")
-def login(data: LoginRequest, db=Depends(get_db)):
+@app.post("/api/login", response_model=dict)
+def login(data: LoginRequest, response: Response, db=Depends(get_db)):
     user = db.query(User).filter(
         (User.username == data.username) | (User.email == data.username)
     ).first()
 
-    if not user or not pwd_context.verify(data.password, user.password):
+    if not user or not verify_password(data.password, user.password):
         return {"success": False, "message": "用户名或密码错误"}
 
     token = create_access_token(user.id)
 
-    return {"success": True, "message": "登录成功", "user": user.to_dict(), "token": token}
+    # 写入 Cookie
+    response.set_cookie(
+        key="token",
+        value=token,
+        httponly=True,
+        max_age=60 * 60 * 24 * 7,  # 7天
+        samesite="lax"
+    )
+
+    return {"success": True, "message": "登录成功", "user": user.to_dict()}
 
 # 登出
-@app.post("/api/logout")
-def logout():
+@app.post("/api/logout", response_model=dict)
+def logout(response: Response):
+    response.delete_cookie(key="token")
     return {"success": True, "message": "已退出登录"}
 
 # 当前用户
@@ -350,4 +314,4 @@ def get_suggestions(db=Depends(get_db), request: Request = None):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8080)
