@@ -1,12 +1,12 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Request, UploadFile, File, Response
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 import os
 
+from fastapi import FastAPI, Depends, Request, Response
+
+from auth import create_access_token, get_token_from_request, get_current_user, get_current_user_from_request, \
+    get_password_hash, verify_password
 from database import get_db
 from models import User, Post, Follow, Like
 from schemas import RegisterRequest, LoginRequest, ProfileUpdate, PostCreate
-from auth import create_access_token, get_token_from_request, get_current_user, get_current_user_from_request, get_password_hash, verify_password
 
 # 上传目录
 UPLOAD_DIR = "uploads"
@@ -14,14 +14,6 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # FastAPI应用
 app = FastAPI(title="Twitter Clone API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # 注册
 @app.post("/api/register")
@@ -314,4 +306,4 @@ def get_suggestions(db=Depends(get_db), request: Request = None):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
