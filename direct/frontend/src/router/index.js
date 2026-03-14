@@ -13,7 +13,9 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  // 根据当前访问路径动态判断 base
+  // 如果路径包含 /wjzgTest/，则 base 为 /wjzgTest/，否则为 /
+  history: createWebHistory(location.pathname.startsWith('/wjzgTest') ? '/wjzgTest/' : '/'),
   routes
 })
 

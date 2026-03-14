@@ -311,7 +311,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
+
+const router = useRouter()
 
 const defaultAvatar = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23667eea"/></svg>'
 
@@ -671,15 +674,14 @@ const saveProfile = async () => {
 const logout = () => {
   localStorage.removeItem('user')
   localStorage.removeItem('token')
-  window.location.href = window.location.origin + '/#/login'
-  window.location.reload()
+  router.push('/login')
 }
 
 onMounted(() => {
   const user = localStorage.getItem('user')
   console.log('Index mounted, user from localStorage:', user)
   if (!user) {
-    window.location.href = window.location.origin + '/#/login'
+    router.push('/login')
     return
   }
 
