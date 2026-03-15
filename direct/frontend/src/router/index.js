@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import Index from '../views/Index.vue'
@@ -13,9 +13,8 @@ const routes = [
 ]
 
 const router = createRouter({
-  // 根据当前访问路径动态判断 base
-  // 如果路径包含 /wjzgTest/，则 base 为 /wjzgTest/，否则为 /
-  history: createWebHistory(location.pathname.startsWith('/wjzgTest') ? '/wjzgTest/' : '/'),
+  // 使用 Hash 模式，无需关心部署路径
+  history: createWebHashHistory(),
   routes
 })
 
