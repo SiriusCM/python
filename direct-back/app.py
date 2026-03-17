@@ -1,4 +1,5 @@
 import os
+import re
 
 from fastapi import FastAPI, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +16,18 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # FastAPI应用
 app = FastAPI(title="Twitter Clone API")
+
+
+# 仅兼容重复斜杠（如 //api/login）
+@app.middleware("http")
+async def normalize_request_path(request: Request, call_next):
+    path = request.scope.get("path", "")
+    normalized_path = re.sub(r"/+", "/", path)
+
+    if normalized_path != path:
+        request.scope["path"] = normalized_path
+
+    return await call_next(request)
 
 # 配置跨域
 app.add_middleware(
