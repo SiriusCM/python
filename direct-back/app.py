@@ -319,4 +319,4 @@ def get_suggestions(db=Depends(get_db), request: Request = None):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8080)
