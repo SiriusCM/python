@@ -1,6 +1,7 @@
 import os
 
 from fastapi import FastAPI, Depends, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 
 from auth import create_access_token, get_token_from_request, get_current_user, get_current_user_from_request, \
     get_password_hash, verify_password
@@ -14,6 +15,18 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # FastAPI应用
 app = FastAPI(title="Twitter Clone API")
+
+# 配置跨域
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://siriuscm.github.io",
+        "https://gcsng.jr.jd.com"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # 注册
 @app.post("/api/register")
