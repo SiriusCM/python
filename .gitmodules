@@ -1,0 +1,3 @@
+[submodule "direct"]
+	path = direct
+	url = http://github.com/SiriusCM/direct.git
